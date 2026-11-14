@@ -256,37 +256,58 @@ try {
       // Back out the price's own box from the card box (see the OCR step).
       const ph = b.h / 5.1, x0 = b.x + ph * 0.5, y0 = b.y + ph * 0.45, cardW = b.w - ph * 0.4;
       const right = Math.min(W - 1, x0 + cardW - ph * 0.4);
-      const sx = Math.max(0, Math.round(x0 - ph * 0.1)), sw = Math.round(Math.min(right, x0 + cardW * 0.75) - sx);
+      const sx = Math.max(0, Math.round(x0 - ph * 0.1)), sw = Math.round(right - sx);
       const sy = Math.max(0, Math.round(y0 - ph * 0.6)), sh = Math.min(H - sy, Math.round(ph * 7));
       if (sw < 20 || sh < 20) return;
       // Find the text rows under the price by counting dark pixels per row.
       const d = x.getImageData(sx, sy, sw, sh).data, lum = new Float32Array(sw * sh);
       for (let i = 0; i < lum.length; i++) lum[i] = d[i * 4] * 0.3 + d[i * 4 + 1] * 0.59 + d[i * 4 + 2] * 0.11;
       const bgL = [...lum].sort((p, q) => p - q)[Math.floor(lum.length * 0.9)];
+      // Card borders (a selected card has a dark outline) add the same few dark
+      // pixels to every row, so a text row is one clearly above that floor.
+      const prof = [];
+      for (let y = 0; y < sh; y++) { let n = 0; for (let xx = 0; xx < sw; xx++) if (lum[y * sw + xx] < bgL - 45) n++; prof.push(n); }
+      const floor = [...prof].sort((p, q) => p - q)[Math.floor(sh * 0.3)];
       const rows = [];
       let start = -1, gap = 0;
       for (let y = 0; y < sh; y++) {
-        let n = 0;
-        for (let xx = 0; xx < sw; xx++) if (lum[y * sw + xx] < bgL - 45) n++;
-        if (n > 2) { if (start < 0) start = y; gap = 0; } else if (start >= 0 && ++gap > 1) { if (y - gap - start >= 3) rows.push({ top: start, bot: y - gap }); start = -1; gap = 0; }
+        const n = prof[y] - floor;
+        if (n > 3) { if (start < 0) start = y; gap = 0; } else if (start >= 0 && ++gap > 1) { if (y - gap - start >= 3) rows.push({ top: start, bot: y - gap }); start = -1; gap = 0; }
       }
       if (start >= 0) rows.push({ top: start, bot: sh - 1 });
-      // The price is the tallest of the first two rows; the address is two rows below it.
-      const pi = rows.length > 1 && rows[1].bot - rows[1].top > rows[0].bot - rows[0].top ? 1 : 0;
-      const row = rows[pi + 2];
+      // The price row is the one where OCR saw the price; the address is two rows below.
+      const py = y0 - sy;
+      let pi = rows.findIndex((r) => r.bot >= py && r.top <= py + ph);
+      if (pi < 0) pi = rows.findIndex((r) => r.top > py - ph);
+      const row = pi < 0 ? null : rows[pi + 2];
       if (!row) return;
-      let inkR = 0;
-      for (let y = row.top; y <= row.bot; y++) for (let xx = sw - 1; xx > inkR; xx--) if (lum[y * sw + xx] < bgL - 45) { inkR = xx; break; }
       const top = sy + row.top, rh = row.bot - row.top + 1;
-      const [r, g, bl] = x.getImageData(Math.max(0, Math.round(x0 - ph * 0.25)), Math.round(top + rh / 2), 1, 1).data;
-      x.fillStyle = `rgb(${r},${g},${bl})`;
-      x.fillRect(x0 - 2, top - 2, Math.min(right, sx + inkR + 4) - x0 + 2, rh + 4);
+      // Where the address text ends: scan right until a gap wider than a word
+      // space, or the video's black side bar.
+      const bx = Math.round(x0), bw = Math.min(W - bx, Math.round(ph * 22));
+      const band = x.getImageData(bx, top, bw, rh).data;
+      let inkEnd = 0, empty = 0, edge = bw;
+      for (let xx = 0; xx < bw; xx++) {
+        let ink = 0, sum = 0;
+        for (let y = 0; y < rh; y++) { const i = (y * bw + xx) * 4, l = band[i] * 0.3 + band[i + 1] * 0.59 + band[i + 2] * 0.11; sum += l; if (l < bgL - 45) ink++; }
+        if (sum / rh < 30) { edge = xx; break; }
+        if (ink) { inkEnd = xx; empty = 0; } else if (++empty > ph * 1.2) break;
+      }
+      const fillR = bx + Math.min(edge, inkEnd + 4);
+      // Background colour: the average of the light pixels around the row.
+      let r = 0, g = 0, bl = 0, n = 0;
+      for (let y = Math.max(0, row.top - 3); y <= Math.min(sh - 1, row.bot + 3); y++) for (let xx = 0; xx < sw; xx++) {
+        const i = y * sw + xx;
+        if (lum[i] >= bgL - 6) { r += d[i * 4]; g += d[i * 4 + 1]; bl += d[i * 4 + 2]; n++; }
+      }
+      x.fillStyle = n ? `rgb(${Math.round(r / n)},${Math.round(g / n)},${Math.round(bl / n)})` : '#fff';
+      x.fillRect(x0 - 2, top - 2, fillR - x0 + 2, rh + 4);
       x.save();
-      x.beginPath(); x.rect(x0 - 2, top - 3, right - x0 + 2, rh + 6); x.clip();
+      x.beginPath(); x.rect(x0 - 2, top - 3, fillR - x0 + 2, rh + 6); x.clip();
       x.fillStyle = 'rgba(78,78,78,0.9)';
       x.font = `${(rh * 1.12).toFixed(1)}px "Segoe UI", Inter, Arial, sans-serif`;
       x.textBaseline = 'alphabetic';
-      x.fillText(`${STREETS[b.id % STREETS.length]}, Buda, TX 78610`, x0, top + rh * 0.88);
+      x.fillText(`${100 + ((b.id * 397) % 9800)} ${STREETS[b.id % STREETS.length].replace(/^\d+ /, '')}, Buda, TX 78610`, x0, top + rh * 0.88, Math.max(ph * 4, fillR - x0 - 2)); // squeezed to fit the original's width
       x.restore();
     };
 
