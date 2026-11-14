@@ -28,7 +28,7 @@ How to get Hikaku into the Chrome Web Store (which also covers Edge if you want 
 
 1. Create an account at https://addons.mozilla.org/developers/ (free) and enable two-factor authentication, which AMO requires for submitting.
 2. **Submit a New Add-on**, choose **On this site** (listed), and upload `dist/hikaku-<version>-firefox.zip`.
-3. The validator will show two warnings, both inside ONNX Runtime Web (`DANGEROUS_EVAL`, `UNSAFE_VAR_ASSIGNMENT`). That's expected; explain them with the reviewer notes in [listing.md](listing.md#notes-for-reviewers).
+3. The validator will show two warnings, both inside ONNX Runtime Web: "The Function constructor is eval" and "Unsafe call to import". That's expected; explain them with the reviewer notes in [listing.md](listing.md#notes-for-reviewers).
 4. **Source code:** AMO asks whether you used tools that minify or transpile code. Our own code isn't processed at all. The only minified files are the unmodified ONNX Runtime release, so answer **No** and point to the reviewer notes, which list the exact npm version and file hashes.
 5. Paste the listing text, pick the categories, add the screenshots and the privacy policy, and submit.
 
@@ -38,5 +38,5 @@ The add-on ID is `hikaku@hikaku.io` (set in `scripts/build.mjs`). Don't change i
 
 ## After launch
 
-- Put the store links on hikaku.io and in the README (replace the "Download" links that point at GitHub releases).
-- Each release: bump the version in both files, update CHANGELOG.md, `npm run build`, and upload the new zips to both stores. Automating the uploads with the Chrome Web Store API and `web-ext sign` is possible later.
+- Put the store links on hikaku.io and in the README (replace the "Download" links that point at GitHub releases). The Firefox listing lives at https://addons.mozilla.org/firefox/addon/hikaku/.
+- Later releases are automated: pushing a `vX.Y.Z` tag uploads the new version to both stores through the Chrome Web Store API and `web-ext sign`. Set up the secrets once, as described in [docs/RELEASING.md](../docs/RELEASING.md). Only this first submission is manual.

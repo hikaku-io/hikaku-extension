@@ -25,7 +25,7 @@ export default [
   },
   {
     // Puppeteer callbacks run inside extension pages.
-    files: ['scripts/e2e.mjs', 'scripts/screenshots.mjs', 'scripts/demo-video.mjs', 'scripts/store-assets.mjs', 'scripts/mp4-to-gif.mjs', 'scripts/web-video.mjs', 'scripts/blur-listings.mjs', 'scripts/trace-images.mjs'],
+    files: ['scripts/e2e.mjs', 'scripts/screenshots.mjs', 'scripts/demo-video.mjs', 'scripts/store-assets.mjs', 'scripts/mp4-to-gif.mjs', 'scripts/web-video.mjs', 'scripts/blur-listings.mjs', 'scripts/trace-images.mjs', 'scripts/capture-listings.mjs', 'scripts/capture-reddit.mjs'],
     languageOptions: { globals: { ...globals.node, ...globals.browser, ...globals.webextensions } },
   },
   {

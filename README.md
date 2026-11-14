@@ -14,18 +14,23 @@
   <a href="https://github.com/hikaku-io/hikaku-extension/releases/latest">Download</a> ·
   <a href="docs/ARCHITECTURE.md">Architecture</a> ·
   <a href="docs/MODELS.md">Models</a> ·
+  <a href="https://github.com/hikaku-io/hikaku-bench">Benchmark</a> ·
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
 <p align="center">
   <a href="https://github.com/hikaku-io/hikaku-extension/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/hikaku-io/hikaku-extension/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/hikaku-io/hikaku-extension/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/hikaku-io/hikaku-extension?color=7c3aed"></a>
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-7c3aed"></a>
   <img alt="Manifest V3" src="https://img.shields.io/badge/manifest-v3-7c3aed">
   <img alt="Chrome and Edge 116+" src="https://img.shields.io/badge/Chrome%20%7C%20Edge-116%2B-7c3aed">
+  <img alt="Firefox 140+" src="https://img.shields.io/badge/Firefox-140%2B-7c3aed">
+  <a href="https://github.com/hikaku-io/hikaku-extension/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/hikaku-io/hikaku-extension?style=flat&color=7c3aed"></a>
 </p>
 
 <p align="center">
-  <img src="docs/images/hover.png" width="820" alt="A feed post with an AI-use declaration and its supporting metadata.">
+  <img src="docs/images/in-the-wild.jpg" width="820" alt="Hikaku on a real listings page: one listing photo has a dashed outline, its summary card reads Likely AI-generated, visual model 100% AI-like, and the details panel explains that the score is not proof.">
+  <br><sub>Hikaku on a real listings page. The street address is fictional, and a flag is the model's estimate, not proof.</sub>
 </p>
 
 > *hikaku* (比較) is Japanese for "comparison". The idea is to weigh what an image claims to be against the evidence it carries.
@@ -56,7 +61,7 @@
 
 **Firefox** (desktop 140+, Android 142+): check [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/hikaku/) for availability, or use the Firefox package from the [latest release](https://github.com/hikaku-io/hikaku-extension/releases/latest).
 
-**Chrome and Edge:** install from a release:
+**Chrome and Edge:** the Chrome Web Store listing is on its way. Until then, install from a release (currently [v0.1.0](https://github.com/hikaku-io/hikaku-extension/releases/tag/v0.1.0)):
 1. Download `hikaku-x.y.z-chrome.zip` from the [latest release](https://github.com/hikaku-io/hikaku-extension/releases/latest) and unzip it.
 2. Open `chrome://extensions` (or `edge://extensions`), turn on **Developer mode**, click **Load unpacked**, and pick the unzipped folder.
 3. Browse. The first image eligible for visual analysis starts a one-time model download (~400 MB with a GPU, ~200 MB without). The popup shows progress.
@@ -111,14 +116,29 @@ npm run e2e                      # full pipeline in Chrome for Testing (EXT_DIR=
 npm run screenshots              # regenerate docs/images (README) screenshots
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout, ground rules and release process.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout and ground rules, and [docs/RELEASING.md](docs/RELEASING.md) for releases. Pushing a `vX.Y.Z` tag builds both packages, publishes a GitHub release, and submits the update to the Chrome Web Store and Firefox Add-ons once their API keys are set.
+
+### Screenshots and demo media
+
+Synthetic examples are safe to publish anywhere. Captures of real sites need care: the capture scripts replace street addresses and usernames with fictional ones, but check every image before you use it, and don't present a likely false positive as an AI image.
+
+```sh
+npm run screenshots              # synthetic feed: hover card, details panel, dot style, popup
+npm run store-assets             # store screenshots, promo tiles and the social card (store/assets/)
+npm run demo-video               # scripted demo video of the synthetic feed
+node scripts/capture-listings.mjs <url>   # real listings page, headless, fictional addresses
+node scripts/capture-reddit.mjs <url>     # a subreddit feed, headless, generic usernames
+node scripts/blur-listings.mjs in.mp4 out.mp4 --mode=fake   # swap addresses in a screen recording
+node scripts/web-video.mjs in.mp4 <dir>   # small web encode with a poster frame
+npm run gif -- in.mp4 out.gif    # GIF version of a video
+```
 
 ## Related repositories
 
 | Repo | What |
 |---|---|
-| [hikaku-site](https://github.com/hikaku-io/hikaku-site) | Landing page for [hikaku.io](https://hikaku.io) (static, hosted on Cloudflare) |
-| [hikaku-bench](https://github.com/hikaku-io/hikaku-bench) | Real-world benchmarks (images, GIFs, video) run against this extension |
+| [hikaku-bench](https://github.com/hikaku-io/hikaku-bench) | Real-world benchmarks (images, GIFs, video) run against this extension, plus model comparisons |
+| hikaku-site | The [hikaku.io](https://hikaku.io) website: static HTML and CSS on Cloudflare Workers, deployed on every push to `main` (repository not public yet) |
 
 ## Contributing & community
 

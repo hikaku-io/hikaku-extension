@@ -19,7 +19,7 @@ These are what make Hikaku worth trusting, so a PR that breaks one won't be merg
 Requirements: Node.js ≥ 20 (see `.nvmrc`), Chrome or Edge ≥ 116.
 
 ```sh
-git clone <repo-url> hikaku && cd hikaku
+git clone https://github.com/hikaku-io/hikaku-extension.git && cd hikaku-extension
 npm install            # also copies ONNX Runtime into vendor/
 ```
 
@@ -83,4 +83,6 @@ Reports of false positives and misses help us more than anything else. Use the *
 
 1. Bump `version` in **both** `manifest.json` and `package.json`.
 2. Move **Unreleased** entries in `CHANGELOG.md` under the new version.
-3. Tag and push: `git tag vX.Y.Z && git push --tags`. The release workflow builds the zip and attaches it to a GitHub release.
+3. Tag and push: `git tag vX.Y.Z && git push --tags`. The release workflow lints, tests and builds, publishes both zips as a GitHub release, and submits the update to the Chrome Web Store and Firefox Add-ons when their API secrets are set.
+
+The one-time store setup, the secrets and what to do when a store upload fails are in [docs/RELEASING.md](docs/RELEASING.md).

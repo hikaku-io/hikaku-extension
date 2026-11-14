@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- `scripts/capture-listings.mjs` and `scripts/capture-reddit.mjs`: headless captures of Hikaku on real pages for the website and store, with street addresses and usernames replaced by fictional ones.
+
 ### Changed
 - Metadata declarations and visual estimates remain separate. Duplicate declarations no longer compound; weak metadata plus a model cannot invent an AI-editing verdict. Uncalibrated confidence percentages are removed from the summary UI.
 - Tiny images and flat graphics are filtered before downloading/loading a model. Metadata and inference share one in-memory image fetch.
