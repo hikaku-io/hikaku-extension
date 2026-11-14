@@ -69,9 +69,13 @@ if (offline) {
 
 const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]));
 const mb = (n) => `${(n / 1048576).toFixed(1)} MB`;
-// On Windows use the system bsdtar; Git Bash's GNU tar can't write zips.
+// Zipping: Windows ships bsdtar, which writes real zips. Elsewhere use zip(1).
+// GNU tar (Linux, Git Bash) ignores the .zip name and writes a plain tar file.
 const winTar = join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe');
-const tar = process.platform === 'win32' && existsSync(winTar) ? winTar : 'tar';
+const zipFolder = (folder, zipName) => {
+  if (process.platform === 'win32' && existsSync(winTar)) execFileSync(winTar, ['-a', '-c', '-f', zipName, '-C', folder, '.'], { cwd: DIST, stdio: 'inherit' });
+  else execFileSync('zip', ['-q', '-r', '-X', join('..', zipName), '.'], { cwd: join(DIST, folder), stdio: 'inherit' });
+};
 
 for (const browser of targets) {
   const m = browser === 'firefox' ? firefoxManifest(manifest) : manifest;
@@ -100,7 +104,7 @@ for (const browser of targets) {
   const total = files.reduce((n, f) => n + statSync(f).size, 0);
   const zipName = `hikaku-${manifest.version}-${browser}${offline ? '-offline' : ''}.zip`;
   rmSync(join(DIST, zipName), { force: true });
-  execFileSync(tar, ['-a', '-c', '-f', zipName, '-C', folder, '.'], { cwd: DIST, stdio: 'inherit' });
+  zipFolder(folder, zipName);
   console.log(`✓ ${browser.padEnd(7)} ${files.length} files, ${mb(total)} → ${relative(ROOT, OUT)}/  (${zipName}, ${mb(statSync(join(DIST, zipName)).size)})`);
 }
 console.log(offline ? '  model bundled, works without network access to Hugging Face'

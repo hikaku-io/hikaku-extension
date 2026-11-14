@@ -32,6 +32,8 @@ jobs:
       - name: Manifest and package versions match
         run: node -e "const m=require('./manifest.json'),p=require('./package.json');if(m.version!==p.version){console.error('manifest '+m.version+' != package '+p.version);process.exit(1)}"
       - run: npm run build
+      - name: Archives are real zips
+        run: for z in dist/*.zip; do unzip -tq "$z"; done
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: hikaku-extension

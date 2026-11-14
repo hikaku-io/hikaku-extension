@@ -28,6 +28,8 @@ jobs:
           V=$(node -p "require('./manifest.json').version")
           [ "v$V" = "$GITHUB_REF_NAME" ] || { echo "Tag $GITHUB_REF_NAME does not match manifest version $V"; exit 1; }
       - run: npm run build
+      - name: Archives are real zips
+        run: for z in dist/*.zip; do unzip -tq "$z"; done
       - name: Extract release notes from CHANGELOG
         run: |
           V=${GITHUB_REF_NAME#v}
