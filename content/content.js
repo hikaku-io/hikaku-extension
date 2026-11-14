@@ -65,22 +65,22 @@
     :host { all: initial; }
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
-    .layer { --violet: #7c3aed; }
-    .layer.dark { --violet: #a78bfa; }
+    .layer { --accent: #1759ad; --on-accent: #fff; }
+    .layer.dark { --accent: #8bbcff; --on-accent: #142134; }
 
     /* Frame: sized to the media, never intercepts the mouse. */
     .fr { position: fixed; top: 0; left: 0; pointer-events: none; }
 
     /* Border style */
-    .fr.border-style { border: 2.5px solid var(--violet); opacity: .85;
+    .fr.border-style { border: 2px solid var(--accent); opacity: .85;
                        box-shadow: 0 0 0 1px rgba(255,255,255,.5); transition: opacity .15s ease, box-shadow .15s ease; }
     .fr.border-style.likely { border-style: dashed; }
     .fr.border-style.edited { border-style: double; border-width: 4px; }
-    .fr.border-style.hot { opacity: 1; box-shadow: 0 0 0 1px rgba(255,255,255,.6), 0 0 16px rgba(124,58,237,.55); }
+    .fr.border-style.hot { opacity: 1; box-shadow: 0 0 0 1px rgba(255,255,255,.8); }
 
     /* Handle (the only clickable part) */
     .hd { position: absolute; pointer-events: auto; cursor: pointer; margin: 0; -webkit-tap-highlight-color: transparent; }
-    .border-style .hd { top: 6px; left: 6px; padding: 3px 7px; border: 0; border-radius: 999px; background: var(--violet); color: #fff;
+    .border-style .hd { top: 6px; left: 6px; padding: 3px 7px; border: 0; border-radius: 3px; background: var(--accent); color: var(--on-accent);
                         font: 600 10px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; letter-spacing: .03em;
                         box-shadow: 0 1px 4px rgba(0,0,0,.35); opacity: 0; transform: translateY(-2px); transition: opacity .15s ease, transform .15s ease; }
     .border-style.hot .hd, .border-style .hd:focus-visible { opacity: 1; transform: none; }
@@ -89,37 +89,37 @@
     /* Dot style */
     .dot-style .hd { top: 2px; right: 2px; width: 20px; height: 20px; padding: 0; border: 0; background: transparent;
                      display: grid; place-items: center; opacity: .55; transition: opacity .15s ease; }
-    .dot-style .hd::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--violet);
+    .dot-style .hd::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
                             box-shadow: 0 0 0 1.5px rgba(255,255,255,.92), 0 1px 3px rgba(0,0,0,.45); transition: width .15s ease, height .15s ease; }
-    .dot-style.edited .hd::after { background: linear-gradient(135deg, var(--violet) 50%, #fff 50%); }
+    .dot-style.edited .hd::after { background: linear-gradient(135deg, var(--accent) 50%, #fff 50%); }
     .dot-style.likely .hd::after { background: transparent;
-                            box-shadow: inset 0 0 0 2px var(--violet), 0 0 0 1.5px rgba(255,255,255,.92), 0 1px 3px rgba(0,0,0,.45); }
+                            box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 1.5px rgba(255,255,255,.92), 0 1px 3px rgba(0,0,0,.45); }
     .dot-style.hot .hd { opacity: .9; }
     .dot-style .hd:hover, .dot-style .hd:focus-visible { opacity: 1; outline: none; }
     .dot-style .hd:hover::after, .dot-style .hd:focus-visible::after { width: 11px; height: 11px; }
 
     /* Tooltip and details panel. Same colors as the toolbar popup. */
     .tip, .panel {
-      --violet: #7c3aed; --violet-soft: rgba(124,58,237,.1); --fg: #18181b; --muted: #71717a;
-      --line: rgba(24,24,27,.09); --bg: #fafafa; --card: #fff; --ok: #16a34a; --neutral: #a1a1aa;
+      --accent: #1759ad; --accent-soft: #edf3fb; --fg: #24292f; --muted: #626c77;
+      --line: #d8dee4; --bg: #ffffff; --card: #fff; --ok: #16a34a; --neutral: #a3acb8;
       position: fixed; top: 0; left: 0; pointer-events: auto; color: var(--fg);
       font: 13px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased;
-      border: 1px solid var(--line); box-shadow: 0 12px 32px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.06);
+      border: 1px solid var(--line); box-shadow: 0 3px 12px rgba(0,0,0,.16);
     }
-    .tip.dark, .panel.dark { --violet: #a78bfa; --violet-soft: rgba(167,139,250,.14); --fg: #f4f4f5; --muted: #a1a1aa;
-                             --line: rgba(244,244,245,.09); --bg: #111113; --card: #1c1c1f; --neutral: #71717a; color-scheme: dark; }
+    .tip.dark, .panel.dark { --accent: #8bbcff; --accent-soft: #26374d; --fg: #e6e8eb; --muted: #a3acb8;
+                             --line: #3a414a; --bg: #17191c; --card: #22262c; --neutral: #626c77; color-scheme: dark; }
 
     /* Verdict chip (shared) */
-    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 7px; border-radius: 999px;
-            font-weight: 600; font-size: 12px; background: var(--violet-soft); color: var(--violet); white-space: nowrap; }
-    .chip.neutral { background: var(--line); color: var(--muted); }
+    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 0; border-radius: 0;
+            font-weight: 600; font-size: 12px; background: transparent; color: var(--fg); white-space: nowrap; }
+    .chip.neutral { background: transparent; color: var(--muted); }
     .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: currentColor; }
     .dot.edited { background: linear-gradient(135deg, currentColor 50%, transparent 50%); box-shadow: 0 0 0 1.5px currentColor inset; }
     .dot.likely { background: transparent; box-shadow: inset 0 0 0 2px currentColor; }
     .pct { font-variant-numeric: tabular-nums; color: var(--muted); }
 
     /* Tooltip */
-    .tip { width: 272px; padding: 12px; border-radius: 12px; background: var(--card); }
+    .tip { width: 272px; padding: 12px; border-radius: 4px; background: var(--card); }
     .tip .head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     .tip .score { font-weight: 650; font-size: 15px; font-variant-numeric: tabular-nums; }
     .tip ul { margin: 8px 0 0; padding: 0; list-style: none; }
@@ -129,39 +129,38 @@
 
     /* Panel */
     .panel { left: auto; right: 16px; top: 16px; width: min(400px, calc(100vw - 32px)); max-height: calc(100vh - 32px);
-             overflow: auto; border-radius: 16px; background: var(--bg); overscroll-behavior: contain; }
+             overflow: auto; border-radius: 4px; background: var(--bg); overscroll-behavior: contain; }
     .p-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 10px 12px 10px 14px;
-             background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+             background: var(--bg); border-bottom: 1px solid var(--line); }
     /* The Hikaku mark (same shapes as icons/logo.svg), inlined so the page doesn't need to load a file. */
-    .brand-logo { width: 18px; height: 18px; flex: none; background: no-repeat center / contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Cpath fill='%237c3aed' d='M59.2 7.88A56.32 56.32 0 0 0 59.2 120.12Z'/%3E%3Cpath fill='%237c3aed' d='M68.8 7.88A56.32 56.32 0 0 1 68.8 120.12L68.8 104.68A40.96 40.96 0 0 0 68.8 23.32Z'/%3E%3C/svg%3E"); }
+    .brand-logo { width: 18px; height: 18px; flex: none; background: no-repeat center / contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Cpath fill='%2324292f' d='M59.2 7.88A56.32 56.32 0 0 0 59.2 120.12Z'/%3E%3Cpath fill='%2324292f' d='M68.8 7.88A56.32 56.32 0 0 1 68.8 120.12L68.8 104.68A40.96 40.96 0 0 0 68.8 23.32Z'/%3E%3C/svg%3E"); }
+    .panel.dark .brand-logo { filter: brightness(0) invert(1); }
     .brand { font-weight: 650; letter-spacing: -.01em; flex: 1; }
     .x { border: 0; background: transparent; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer;
-         width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; }
+         width: 28px; height: 28px; border-radius: 3px; display: grid; place-items: center; }
     .x:hover { background: var(--line); color: var(--fg); }
-    .x:focus-visible { outline: 2px solid var(--violet); }
+    .x:focus-visible { outline: 2px solid var(--accent); }
     .p-body { padding: 12px; }
 
-    .hero { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 10px;
-            box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+    .hero { background: var(--card); border-bottom: 1px solid var(--line); padding: 2px 0 12px; margin-bottom: 12px; }
     .hero-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .big { font-size: 26px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1; }
     .big small { font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-left: 4px; }
     .meter { height: 6px; border-radius: 999px; background: var(--line); margin: 12px 0 0; overflow: hidden; }
-    .meter > i { display: block; height: 100%; background: var(--violet); border-radius: 999px; }
+    .meter > i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
     .sub { color: var(--muted); font-size: 12px; margin-top: 10px; }
     .url { color: var(--muted); font: 11px/1.4 ui-monospace, Consolas, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
            margin-top: 8px; padding: 5px 8px; background: var(--bg); border-radius: 6px; }
 
-    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 10px;
-            box-shadow: 0 1px 2px rgba(0,0,0,.04); }
-    h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+    .card { background: var(--card); border-bottom: 1px solid var(--line); padding: 0 0 12px; margin-bottom: 12px; }
+    h2 { font-size: 12px; letter-spacing: 0; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
     .sigs { list-style: none; margin: 0; padding: 0; }
     .sigs li { padding: 8px 0; border-top: 1px solid var(--line); }
     .sigs li:first-child { border-top: 0; padding-top: 0; }
     .sigs li:last-child { padding-bottom: 0; }
     .sig-top { display: flex; gap: 8px; align-items: center; }
     .sig-top > span:first-child { flex: 1; font-weight: 550; }
-    .badge { font-size: 10px; font-weight: 600; letter-spacing: .03em; padding: 2px 6px; border-radius: 6px; background: var(--violet-soft); color: var(--violet); }
+    .badge { font-size: 10px; font-weight: 600; letter-spacing: .03em; padding: 2px 6px; border-radius: 2px; background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
     .detail { color: var(--muted); font-size: 11.5px; word-break: break-word; margin-top: 3px; }
     dl { display: grid; grid-template-columns: minmax(96px, max-content) 1fr; gap: 6px 12px; margin: 0; font-size: 12.5px; }
     dt { color: var(--muted); }
@@ -169,27 +168,24 @@
     details { margin-top: 6px; }
     details:first-of-type { margin-top: 0; }
     summary { cursor: pointer; color: var(--fg); font-size: 12px; font-weight: 550; padding: 2px 0; }
-    summary:hover { color: var(--violet); }
+    summary:hover { color: var(--accent); }
     pre { white-space: pre-wrap; word-break: break-word; font: 11px/1.45 ui-monospace, Consolas, monospace; background: var(--bg);
-          border: 1px solid var(--line); padding: 8px; border-radius: 8px; max-height: 240px; overflow: auto; margin: 6px 0 0; }
+          border: 1px solid var(--line); padding: 8px; border-radius: 3px; max-height: 240px; overflow: auto; margin: 6px 0 0; }
     .foot-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 2px 2px 4px; }
-    .btn { border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 8px; padding: 6px 12px;
+    .btn { border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 3px; padding: 6px 12px;
            font: 550 12px/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
-    .btn:hover { border-color: var(--violet); color: var(--violet); }
-    .btn:focus-visible { outline: 2px solid var(--violet); outline-offset: 1px; }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
     .note { color: var(--muted); font-size: 11px; }
     .loading { display: flex; align-items: center; gap: 10px; color: var(--muted); }
-    .spinner { width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--violet); border-radius: 50%; animation: spin .8s linear infinite; }
+    .spinner { width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Entrances. An animation restarts whenever [hidden] is removed, so these
-       play each time the card or panel opens. The tooltip positions itself with
-       transform, so it only fades; the panel can slide. */
+    /* Fade panels in without moving their controls. */
     .tip:not([hidden]) { animation: hk-fade .16s ease-out; }
-    .panel:not([hidden]) { animation: hk-slide .24s cubic-bezier(.2, .8, .2, 1); }
+    .panel:not([hidden]) { animation: hk-fade .12s ease-out; }
     .fr { animation: hk-fade .3s ease-out; }
     @keyframes hk-fade { from { opacity: 0; } }
-    @keyframes hk-slide { from { opacity: 0; transform: translateX(16px) scale(.985); } }
     @media (prefers-reduced-motion: reduce) {
       .tip:not([hidden]), .panel:not([hidden]), .fr { animation: none; }
     }

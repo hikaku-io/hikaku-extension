@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'icons');
 mkdirSync(OUT, { recursive: true });
 
-const VIOLET = [124, 58, 237]; // #7c3aed
+const INK_BLUE = [82, 119, 156]; // visible on light and dark browser toolbars
 
 // Proportions, relative to the icon size. Small sizes get minimums so the gap
 // and the ring don't disappear at 16 px.
@@ -49,9 +49,9 @@ for (const size of [16, 32, 48, 128]) {
         }
       }
       const i = (y * size + x) * 4;
-      png.data[i] = VIOLET[0];
-      png.data[i + 1] = VIOLET[1];
-      png.data[i + 2] = VIOLET[2];
+      png.data[i] = INK_BLUE[0];
+      png.data[i + 1] = INK_BLUE[1];
+      png.data[i + 2] = INK_BLUE[2];
       png.data[i + 3] = Math.round((255 * hits) / (SS * SS));
     }
   }
@@ -64,8 +64,8 @@ const left = g.c - g.gap / 2, right = g.c + g.gap / 2;
 const yAt = (x) => Math.sqrt(g.r * g.r - (x - g.c) ** 2); // half-chord height at x
 const rIn = g.r - g.ring;
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Hikaku">
-  <path fill="#7c3aed" d="M${left} ${(g.c - yAt(left)).toFixed(2)} A${g.r} ${g.r} 0 0 0 ${left} ${(g.c + yAt(left)).toFixed(2)} Z"/>
-  <path fill="#7c3aed" fill-rule="evenodd" d="M${right} ${(g.c - yAt(right)).toFixed(2)} A${g.r} ${g.r} 0 0 1 ${right} ${(g.c + yAt(right)).toFixed(2)} L${right} ${(g.c + Math.sqrt(rIn * rIn - (right - g.c) ** 2)).toFixed(2)} A${rIn} ${rIn} 0 0 0 ${right} ${(g.c - Math.sqrt(rIn * rIn - (right - g.c) ** 2)).toFixed(2)} Z"/>
+  <path fill="#52779c" d="M${left} ${(g.c - yAt(left)).toFixed(2)} A${g.r} ${g.r} 0 0 0 ${left} ${(g.c + yAt(left)).toFixed(2)} Z"/>
+  <path fill="#52779c" fill-rule="evenodd" d="M${right} ${(g.c - yAt(right)).toFixed(2)} A${g.r} ${g.r} 0 0 1 ${right} ${(g.c + yAt(right)).toFixed(2)} L${right} ${(g.c + Math.sqrt(rIn * rIn - (right - g.c) ** 2)).toFixed(2)} A${rIn} ${rIn} 0 0 0 ${right} ${(g.c - Math.sqrt(rIn * rIn - (right - g.c) ** 2)).toFixed(2)} Z"/>
 </svg>
 `;
 writeFileSync(join(OUT, 'logo.svg'), svg);
