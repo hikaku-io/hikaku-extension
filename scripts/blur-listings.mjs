@@ -253,19 +253,40 @@ try {
       return { top: samples.find((s) => s.seg === here.seg)?.top ?? 0, cards: [...best.values()].map((e) => e.b) };
     };
     const fakeAddress = (b) => {
-      // Back out the price's own box from the card box (see the OCR step), then
-      // cover the address line, which sits 3.4 to 4.3 price-heights below the price.
+      // Back out the price's own box from the card box (see the OCR step).
       const ph = b.h / 5.1, x0 = b.x + ph * 0.5, y0 = b.y + ph * 0.45, cardW = b.w - ph * 0.4;
-      const rx = x0 - ph * 0.15, ry = y0 + ph * 3.42, rw = Math.max(ph * 6, cardW - ph * 0.5), rh = ph * 1.0;
-      const [r, g, bl] = x.getImageData(Math.round(x0 - ph * 0.3), Math.round(y0 + ph * 3.85), 1, 1).data;
+      const right = Math.min(W - 1, x0 + cardW - ph * 0.4);
+      const sx = Math.max(0, Math.round(x0 - ph * 0.1)), sw = Math.round(Math.min(right, x0 + cardW * 0.75) - sx);
+      const sy = Math.max(0, Math.round(y0 - ph * 0.6)), sh = Math.min(H - sy, Math.round(ph * 7));
+      if (sw < 20 || sh < 20) return;
+      // Find the text rows under the price by counting dark pixels per row.
+      const d = x.getImageData(sx, sy, sw, sh).data, lum = new Float32Array(sw * sh);
+      for (let i = 0; i < lum.length; i++) lum[i] = d[i * 4] * 0.3 + d[i * 4 + 1] * 0.59 + d[i * 4 + 2] * 0.11;
+      const bgL = [...lum].sort((p, q) => p - q)[Math.floor(lum.length * 0.9)];
+      const rows = [];
+      let start = -1, gap = 0;
+      for (let y = 0; y < sh; y++) {
+        let n = 0;
+        for (let xx = 0; xx < sw; xx++) if (lum[y * sw + xx] < bgL - 45) n++;
+        if (n > 2) { if (start < 0) start = y; gap = 0; } else if (start >= 0 && ++gap > 1) { if (y - gap - start >= 3) rows.push({ top: start, bot: y - gap }); start = -1; gap = 0; }
+      }
+      if (start >= 0) rows.push({ top: start, bot: sh - 1 });
+      // The price is the tallest of the first two rows; the address is two rows below it.
+      const pi = rows.length > 1 && rows[1].bot - rows[1].top > rows[0].bot - rows[0].top ? 1 : 0;
+      const row = rows[pi + 2];
+      if (!row) return;
+      let inkR = 0;
+      for (let y = row.top; y <= row.bot; y++) for (let xx = sw - 1; xx > inkR; xx--) if (lum[y * sw + xx] < bgL - 45) { inkR = xx; break; }
+      const top = sy + row.top, rh = row.bot - row.top + 1;
+      const [r, g, bl] = x.getImageData(Math.max(0, Math.round(x0 - ph * 0.25)), Math.round(top + rh / 2), 1, 1).data;
       x.fillStyle = `rgb(${r},${g},${bl})`;
-      x.fillRect(rx, ry, rw, rh);
+      x.fillRect(x0 - 2, top - 2, Math.min(right, sx + inkR + 4) - x0 + 2, rh + 4);
       x.save();
-      x.beginPath(); x.rect(rx, ry, rw, rh + ph * 0.15); x.clip();
+      x.beginPath(); x.rect(x0 - 2, top - 3, right - x0 + 2, rh + 6); x.clip();
       x.fillStyle = 'rgba(78,78,78,0.9)';
-      x.font = `${(ph * 0.84).toFixed(1)}px "Segoe UI", Inter, Arial, sans-serif`;
+      x.font = `${(rh * 1.12).toFixed(1)}px "Segoe UI", Inter, Arial, sans-serif`;
       x.textBaseline = 'alphabetic';
-      x.fillText(`${STREETS[b.id % STREETS.length]}, Buda, TX 78610`, x0, y0 + ph * 4.1);
+      x.fillText(`${STREETS[b.id % STREETS.length]}, Buda, TX 78610`, x0, top + rh * 0.88);
       x.restore();
     };
 
