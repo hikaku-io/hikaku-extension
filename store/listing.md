@@ -8,7 +8,7 @@ Copy-paste text for both stores. Keep the claims here in line with what the exte
 
 **Summary** (shown under the name; max 132 characters):
 
-> Spot AI-generated images and video as you browse. Hikaku outlines them and shows you why. Everything runs on your device.
+> Seeing is believing. Check anyway. Hikaku outlines AI-generated images and video, and shows you why.
 
 **Category:** Tools
 
@@ -66,7 +66,7 @@ Copy-paste text for both stores. Keep the claims here in line with what the exte
 
 **Summary** (max 250 characters):
 
-> Spot AI-generated images and video as you browse. Hikaku outlines them, shows you the evidence behind each flag, and does all of it on your own computer. No account, no tracking.
+> Seeing is believing. Check anyway. Hikaku outlines AI-generated images and video as you browse, shows you the evidence behind each flag, and does all of it on your own computer. No account, no tracking.
 
 **Description:** use the Chrome description above (AMO allows basic formatting).
 
@@ -82,7 +82,7 @@ Copy-paste text for both stores. Keep the claims here in line with what the exte
 
 > Thanks for reviewing Hikaku. A few things that will save you time:
 >
-> 1. Third-party library. vendor/ort/ is ONNX Runtime Web 1.31.1 by Microsoft (MIT), copied unmodified from the npm package "onnxruntime-web@1.31.1", folder dist/. The two validator warnings (DANGEROUS_EVAL, UNSAFE_VAR_ASSIGNMENT) come from that library. SHA-256 of the shipped files:
+> 1. Third-party library. vendor/ort/ is ONNX Runtime Web 1.31.1 by Microsoft (MIT), copied unmodified from the npm package "onnxruntime-web@1.31.1", folder dist/. The two validator warnings ("The Function constructor is eval" in ort-wasm-simd-threaded.asyncify.mjs, and "Unsafe call to import" in ort.webgpu.min.mjs, which is ONNX Runtime loading its own WebAssembly glue file from inside the package) come from that library. SHA-256 of the shipped files:
 >    - ort.webgpu.min.mjs  329cd956772397a1aedd668e911195d39afefb182f6fc14aafa4f08ac8d8f379
 >    - ort-wasm-simd-threaded.asyncify.mjs  59cf781530e1a16df2a291d78798e3ec1152467edaec402d6f9599d85047c302
 >    - ort-wasm-simd-threaded.asyncify.wasm  ca319e9539cd0f1e291cf56074760121eaf39650f5dbf84b6e52c07f4b2944ec

@@ -105,15 +105,15 @@ try {
       <div><div style="font-weight:750;font-size:${size}px;letter-spacing:-.02em">Hikaku</div>
       <div style="font-size:${size * 0.36}px;opacity:.82;margin-top:${size * 0.12}px">${sub}</div></div>
     </div>`;
-  await render(440, 280, brand(48, 'Spot AI images as you browse'), 'promo-small.png');
-  await render(1400, 560, brand(96, 'See what\'s AI, right where you browse.'), 'promo-marquee.png');
+  await render(440, 280, brand(48, 'Seeing is believing. Check anyway.'), 'promo-small.png');
+  await render(1400, 560, brand(96, 'Seeing is believing. Check anyway.'), 'promo-marquee.png');
   // Social share image for hikaku.io (Open Graph / Twitter card size).
   const shot1 = readFileSync(join(OUT, 'screenshot-1.png'));
   await render(1200, 630, `
     <div style="position:absolute;inset:0;background:linear-gradient(135deg,#0f0b1f,#2a1260 70%,#4c1d95)"></div>
     <div style="position:absolute;left:64px;top:0;bottom:0;width:470px;display:flex;flex-direction:column;justify-content:center;color:#fff">
       <div style="display:flex;align-items:center;gap:16px"><img src="${logo}" style="width:64px;height:64px"><span style="font-weight:750;font-size:44px;letter-spacing:-.02em">Hikaku</span></div>
-      <div style="font-weight:700;font-size:46px;line-height:1.1;letter-spacing:-.02em;margin-top:30px">See what's AI, right where you browse.</div>
+      <div style="font-weight:700;font-size:46px;line-height:1.1;letter-spacing:-.02em;margin-top:30px">Seeing is believing. Check anyway.</div>
       <div style="font-size:22px;opacity:.8;margin-top:20px;line-height:1.4">Free, open-source extension for Chrome, Edge and Firefox. Runs on your device.</div>
     </div>
     <div style="position:absolute;left:580px;top:70px;width:760px;height:490px;border-radius:16px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5)">

@@ -346,7 +346,7 @@ function caption(text, alpha) {
   x.fillStyle = '#fff'; x.textAlign = 'left'; x.fillText(text, px + 36, py + 33); x.restore();
 }
 function drawSegment(s, t) {
-  if (s.kind === 'title') return card('Hikaku', 'See what\\'s AI, right where you browse.');
+  if (s.kind === 'title') return card('Hikaku', 'Seeing is believing. Check anyway.');
   if (s.kind === 'end') return card('Hikaku', 'Free, open source, and private.', 'hikaku.io');
   if (s.kind === 'feed' || s.kind === 'live') {
     const sc = s.kind;

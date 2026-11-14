@@ -38,3 +38,27 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: gh release create "$GITHUB_REF_NAME" dist/*.zip --title "Hikaku $GITHUB_REF_NAME" --notes-file release-notes.md
+
+      # Store publishing. Each step skips itself until its secrets are set, so
+      # the GitHub release works on its own. Both stores review the upload first;
+      # once approved, browsers update installed copies automatically.
+      - name: Publish to the Chrome Web Store
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+        run: |
+          if [ -z "$CWS_REFRESH_TOKEN" ]; then echo "::notice::Chrome Web Store secrets not set, skipping."; exit 0; fi
+          node scripts/publish-chrome.mjs "dist/hikaku-${GITHUB_REF_NAME#v}-chrome.zip"
+      - name: Publish to Firefox Add-ons
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          if [ -z "$WEB_EXT_API_KEY" ]; then echo "::notice::Firefox Add-ons secrets not set, skipping."; exit 0; fi
+          V=${GITHUB_REF_NAME#v}
+          git archive --format=zip -o "dist/hikaku-$V-source.zip" HEAD
+          npx --yes web-ext@10.8.0 sign --channel=listed --source-dir "dist/hikaku-$V-firefox" \
+            --upload-source-code "dist/hikaku-$V-source.zip" --artifacts-dir dist/amo --approval-timeout 0

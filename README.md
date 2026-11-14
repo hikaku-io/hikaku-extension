@@ -5,7 +5,7 @@
 <h1 align="center">Hikaku</h1>
 
 <p align="center">
-  <strong>See what's AI, right where you browse.</strong><br>
+  <strong>Seeing is believing. Check anyway.</strong><br>
   A browser extension that quietly flags AI-generated images and video, and shows you why. Everything runs on your device.
 </p>
 
@@ -48,14 +48,16 @@
 | 📋 | **C2PA signature verification** | Today credentials are read, not cryptographically verified |
 | 📋 | **Platform AI labels** | YouTube "Altered or synthetic", TikTok/Meta "AI info" |
 | 📋 | **AI-written text detection** | |
-| 📋 | **Chrome Web Store, Edge Add-ons, Firefox** | |
+| 🚧 | **Store listings** | [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/hikaku/) submitted; Chrome Web Store and Edge Add-ons next |
 
 ✅ working · 🚧 in progress · 📋 planned
 
 ## Install
 
-From a release (recommended):
-1. Download `hikaku-x.y.z.zip` from the [latest release](https://github.com/hikaku-io/hikaku-extension/releases/latest) and unzip it.
+**Firefox** (140 or newer, desktop and Android): get it from [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/hikaku/). It updates itself.
+
+**Chrome and Edge:** the Chrome Web Store listing is in review. Until then, install from a release:
+1. Download `hikaku-x.y.z-chrome.zip` from the [latest release](https://github.com/hikaku-io/hikaku-extension/releases/latest) and unzip it.
 2. Open `chrome://extensions` (or `edge://extensions`), turn on **Developer mode**, click **Load unpacked**, and pick the unzipped folder.
 3. Browse. The first image kicks off a one-time model download (~400 MB with a GPU, ~200 MB without). The popup shows progress.
 
