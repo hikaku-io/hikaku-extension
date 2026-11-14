@@ -1,0 +1,37 @@
+{
+  "name": "hikaku",
+  "version": "0.1.0",
+  "description": "Browser extension that flags AI-generated images and video. Runs on your device, nothing leaves it.",
+  "license": "Apache-2.0",
+  "homepage": "https://hikaku.io",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "setup": "node scripts/setup.mjs",
+    "postinstall": "node scripts/setup.mjs",
+    "eval-model": "node scripts/eval-model.mjs",
+    "e2e": "node scripts/e2e.mjs",
+    "build": "node scripts/build.mjs",
+    "lint": "eslint .",
+    "screenshots": "node scripts/screenshots.mjs",
+    "demo-video": "node scripts/demo-video.mjs",
+    "store-assets": "node scripts/store-assets.mjs",
+    "gif": "node scripts/mp4-to-gif.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.15.0",
+    "gifenc": "1.0.3",
+    "globals": "17.14.0",
+    "jpeg-js": "0.4.4",
+    "mp4-muxer": "5.2.2",
+    "onnxruntime-web": "1.31.1",
+    "pngjs": "7.0.0",
+    "puppeteer": "25.16.0",
+    "tesseract.js": "7.0.0"
+  }
+}

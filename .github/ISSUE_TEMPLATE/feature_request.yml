@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest a new detection signal, model, or UI improvement
+title: "[feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can't you do today, or what does Hikaku get wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: If you're suggesting a model, tell us its license, its size and any evaluation numbers you know of.
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Fits the project principles
+      options:
+        - label: Works on-device; nothing the user browses leaves the browser
+          required: true
+        - label: Doesn't require remotely hosted code
+          required: true

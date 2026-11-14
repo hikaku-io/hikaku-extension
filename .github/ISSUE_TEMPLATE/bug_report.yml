@@ -1,0 +1,40 @@
+name: Bug report
+description: Something in the extension is broken (not a detection mistake)
+title: "[bug] "
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Include what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open https://…
+        2. Hover the flagged image
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: console
+    attributes:
+      label: Errors
+      description: Grab these from the "Errors" button on Hikaku's card at chrome://extensions, or from the page's DevTools console.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Hikaku version, browser and OS
+      placeholder: "0.1.0, Chrome 142, Windows 11"
+    validations:
+      required: true
+  - type: dropdown
+    id: model
+    attributes:
+      label: Visual model status (from the toolbar popup)
+      options: [Ready on GPU, Ready on CPU, Downloading / loading, Error, Off]

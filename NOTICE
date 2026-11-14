@@ -1,0 +1,22 @@
+Hikaku
+Copyright 2026 The Hikaku Authors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes or uses the following third-party components:
+
+--------------------------------------------------------------------------------
+ONNX Runtime Web (onnxruntime-web 1.31.1)
+  Copyright (c) Microsoft Corporation
+  MIT License. See vendor/ort/LICENSE (source: third_party/onnxruntime-web/LICENSE)
+  https://github.com/microsoft/onnxruntime
+  Bundled in builds as vendor/ort/.
+
+--------------------------------------------------------------------------------
+AI image detection model "ai-image-detector-deploy"
+  Author: Sloan Haywood (https://huggingface.co/haywoodsloan/ai-image-detector-deploy)
+  Apache License 2.0
+  ONNX conversion: https://huggingface.co/SoldadoXara/ai-image-detector-deploy-ONNX
+  (revision 0df8696b5db0ab5bd72baeab571fec55d65128e7)
+  Not bundled by default: downloaded on first use from Hugging Face, or bundled
+  into "--offline" builds under models/ai-image-detector/.

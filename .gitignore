@@ -1,0 +1,12 @@
+node_modules/
+vendor/
+models/
+dist/
+*.part
+.eval-cache/
+.e2e-shots/
+.DS_Store
+Thumbs.db
+demo-output/
+*.traineddata
+scripts/_*.mjs

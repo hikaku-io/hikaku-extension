@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Wait a week before proposing a new release, so a bad or hijacked publish
+    # has time to be caught and pulled. Security updates still come right away.
+    cooldown:
+      default-days: 7
+    groups:
+      dev-tooling:
+        patterns: ['eslint', '@eslint/*', 'globals', 'puppeteer', 'jpeg-js', 'pngjs', 'gifenc', 'mp4-muxer', 'tesseract.js']
+    # onnxruntime-web is vendored into the extension: review its updates on their own.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

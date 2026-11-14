@@ -1,0 +1,43 @@
+name: Detection report
+description: Hikaku got an image or video wrong (false positive or a miss)
+title: "[detection] "
+labels: [detection]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks, these reports are how detection gets better. Only share media you have the right to share, and please don't post private images of people.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What went wrong?
+      options:
+        - Flagged as AI, but it's real (false positive)
+        - Not flagged, but it's AI-generated (miss)
+        - Not flagged, but it's AI-edited / face-swapped (miss)
+        - Wrong reason or confidence shown
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Media URL
+      description: Direct link to the image/video (or the page it's on).
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: How do you know?
+      description: e.g. the creator's post, original camera file, generator used.
+  - type: textarea
+    id: json
+    attributes:
+      label: Details panel → Copy JSON
+      description: Click the flag (or right-click → Inspect for AI generation), then **Copy JSON** and paste here.
+      render: json
+  - type: input
+    id: version
+    attributes:
+      label: Hikaku version and browser
+      placeholder: "0.1.0, Chrome 142 on Windows 11"

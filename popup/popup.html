@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8">
+  <title>Hikaku</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="top">
+    <img src="../icons/icon32.png" alt="" class="logo">
+    <div class="title">
+      <h1>Hikaku</h1>
+      <p id="pageStats" class="muted">Checking this page…</p>
+    </div>
+    <label class="switch" title="Turn flagging on or off">
+      <input type="checkbox" id="enabled" role="switch" aria-label="Flag AI content on pages">
+      <span class="track"><span class="thumb"></span></span>
+    </label>
+  </header>
+
+  <main id="settings">
+    <section class="card">
+      <h2>Flag style</h2>
+      <div class="choices" role="radiogroup" aria-label="Flag style">
+        <label class="choice">
+          <input type="radio" name="style" value="border">
+          <span class="preview preview-border"><span class="ph"></span><span class="tag">AI</span></span>
+          <span class="choice-label">Border</span>
+        </label>
+        <label class="choice">
+          <input type="radio" name="style" value="dot">
+          <span class="preview preview-dot"><span class="ph"></span><span class="pdot"></span></span>
+          <span class="choice-label">Dot</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Sensitivity</h2>
+      <div class="segmented" role="radiogroup" aria-label="Sensitivity">
+        <label><input type="radio" name="sensitivity" value="balanced"><span>Balanced</span></label>
+        <label><input type="radio" name="sensitivity" value="strict"><span>Strict</span></label>
+      </div>
+      <p class="hint" id="sensHint"></p>
+    </section>
+
+    <section class="card">
+      <h2>Theme</h2>
+      <div class="segmented three" role="radiogroup" aria-label="Theme">
+        <label><input type="radio" name="theme" value="auto"><span>Auto</span></label>
+        <label><input type="radio" name="theme" value="light"><span>Light</span></label>
+        <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+      </div>
+      <p class="hint">Used for this popup and for the cards and panels on web pages. Auto matches Chrome.</p>
+    </section>
+
+    <section class="card">
+      <div class="row">
+        <div>
+          <h2 class="inline">Visual model</h2>
+          <p class="hint tight">Runs on this device. Images never leave your browser.</p>
+        </div>
+        <label class="switch small">
+          <input type="checkbox" id="visualModel" role="switch" aria-label="Use the on-device visual model">
+          <span class="track"><span class="thumb"></span></span>
+        </label>
+      </div>
+      <div class="model" id="model">
+        <span class="status-dot" id="modelDot"></span>
+        <span id="modelText">Not loaded</span>
+        <button type="button" id="modelLoad" class="link" hidden>Load now</button>
+      </div>
+      <div class="bar" id="modelBar" hidden><i id="modelFill"></i></div>
+    </section>
+  </main>
+
+  <footer class="muted">
+    Hover a flagged image for a summary, click its tag or right-click → <em>Inspect for AI generation</em> for details.
+    No flag ≠ human-made.
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
