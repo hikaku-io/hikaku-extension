@@ -8,15 +8,15 @@ flowchart LR
     CS["content/content.js<br/>observe media · overlay · video frame sampling"]
   end
   subgraph Ext["Extension"]
-    SW["background.js (service worker)<br/>fetch · cache · metadata · scoring · context menu · tab capture"]
-    OFF["offscreen/offscreen.js<br/>ONNX Runtime · WebGPU → WASM"]
+    SW["background.js (service worker)<br/>cache · metadata-only checks · scoring · context menu · tab capture"]
+    OFF["offscreen/offscreen.js<br/>single image fetch · metadata · gates · ONNX Runtime"]
     POP["popup/<br/>settings · model status"]
     ST[("chrome.storage.sync<br/>settings")]
   end
   HF[("huggingface.co<br/>model weights, once")]
 
   CS -- "analyze(url) / analyzeFrames(frames) / captureFrame(rect)" --> SW
-  SW -- "classify(url | data:)" --> OFF
+  SW -- "classify(url | data:, inspect, secondOpinion)" --> OFF
   OFF -. "first use only" .-> HF
   POP -- "modelStatus / warmup" --> SW
   POP <--> ST
@@ -25,29 +25,29 @@ flowchart LR
 
 ## Detection pipeline
 
-Cheap checks that can settle the question run first. The model only runs if they can't.
+Images are fetched once in the offscreen runner (or Firefox background page) when visual analysis is enabled. Bytes stay in memory, feed metadata extraction and image decoding, and are not persisted. With the model disabled, the service worker handles metadata alone.
 
 ```mermaid
 flowchart TD
-  A["Image / video enters viewport<br/>(IntersectionObserver, ≥ 96 px)"] --> B["Fetch bytes in service worker<br/>(same URL, browser cache)"]
-  B --> C["lib/metadata.js<br/>C2PA · IPTC/XMP · EXIF · PNG text · MP4 tags"]
-  C --> D{"Provenance conclusive?<br/>(AI declared, or camera capture)"}
-  D -- yes --> V["lib/score.js → verdict"]
-  D -- no --> E{"Screenshot / flat graphic?<br/>(lib/preprocess.js)"}
-  E -- yes --> V
-  E -- no --> F["Visual model in offscreen doc<br/>1 frame (image) · 3 frames (GIF/video) → median"]
-  F --> V
-  V --> G{"Flag?<br/>(sensitivity setting)"}
-  G -- yes --> H["Border / dot overlay<br/>hover card · details panel"]
+  A["Media near the viewport"] --> B["Fetch once; read metadata declarations"]
+  B --> C["Decode; skip tiny images and flat graphics"]
+  C --> D["Load model only for eligible images"]
+  D --> E["SwinV2 estimate"]
+  E --> F["Separate declarations and model estimates"]
+  E -. "Explicit request in image details" .-> G["Optional Community Forensics estimate"]
+  G --> F
 ```
 
 ### Scoring (`lib/score.js`)
 
-Every finding becomes a **signal** `{source, kind, strength, label, detail}`, and independent signals are combined with a noisy-OR. A few rules keep false positives down:
+- Evidence weights rank metadata signals; they are not confidence probabilities.
+- Repeated EXIF/XMP/C2PA claims use the strongest declaration, not noisy-OR.
+- Only explicit edit declarations produce `ai-edited`. A model cannot invent an edit history or promote a weak declaration to a verified claim.
+- C2PA signatures and asset binding are not verified. Neither capture nor AI-use declarations bypass the visual check.
+- Model-only results can reach **Likely AI** at the 0.90 threshold, never a verified verdict. Two weak model scores do not compound.
+- **Strict** flags explicit metadata declarations only. The UI explains that declarations are editable.
 
-- Generator names only count when they appear in *tool* fields (EXIF Software, XMP CreatorTool and similar), never in free-text descriptions or artist names.
-- The visual model on its own can reach **Likely AI** (P ≥ 0.90) at most. **AI-generated** needs provenance.
-- **Strict** sensitivity only flags verdicts backed by provenance.
+Image and video-metadata work use separate bounded queues. Explicit context-menu inspections and second opinions are promoted ahead of queued automatic work. Queued jobs are cancelled on tab navigation/closure when no other tab needs them; active shared inference is allowed to finish. Transient errors are evicted from both caches, with at most two automatic image retries. Changing the visual-model setting invalidates page results and ignores stale responses.
 
 ### Why an offscreen document?
 
@@ -70,7 +70,7 @@ MV3 service workers get suspended after about 30 s idle, and they can't load ONN
 
 | Message | From → To | Purpose |
 |---|---|---|
-| `analyze {url, kind}` | content/popup → SW | Full analysis of an image or video URL (cached per session) |
+| `analyze {url, kind}` | content/popup → SW | Full analysis (cached per session); `secondOpinion: true` explicitly requests the optional still-image model |
 | `analyzeFrames {url, frames[]}` | content → SW | Score sampled video frames, merge with container metadata |
 | `captureFrame {rect, dpr}` | content → SW | Screenshot fallback for tainted video |
 | `showDetails {url, result \| loading}` | SW → content | Open the panel (context menu) |

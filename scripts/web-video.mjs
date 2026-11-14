@@ -5,7 +5,7 @@
 // We don't use MediaRecorder here: its MP4s leave the total duration out of the
 // header, so players show the wrong length and seeking misbehaves.
 //
-// Usage: node scripts/web-video.mjs <in.mp4> <outDir> [--width=1280] [--kbps=1800] [--poster-at=8] [--fps=30]
+// Usage: node scripts/web-video.mjs <in.mp4> <outDir> [--width=1280] [--kbps=1800] [--poster-at=8] [--fps=30] [--duration=<s>]
 // Output: <outDir>/demo.mp4, <outDir>/demo-poster.jpg, <outDir>/demo-poster.webp
 import puppeteer from 'puppeteer';
 import http from 'node:http';
@@ -15,7 +15,7 @@ import { join } from 'node:path';
 const args = process.argv.slice(2);
 const [input, outDir] = args.filter((a) => !a.startsWith('--'));
 const opt = (k, d) => Number(args.find((a) => a.startsWith(`--${k}=`))?.split('=')[1] ?? d);
-const WIDTH = opt('width', 1280), KBPS = opt('kbps', 1800), POSTER_AT = opt('poster-at', 8), FPS = opt('fps', 30);
+const WIDTH = opt('width', 1280), KBPS = opt('kbps', 1800), POSTER_AT = opt('poster-at', 8), FPS = opt('fps', 30), DURATION = opt('duration', 0);
 mkdirSync(outDir, { recursive: true });
 
 const size = statSync(input).size;
@@ -45,7 +45,7 @@ const browser = await puppeteer.launch({ headless: true, protocolTimeout: 0, arg
 try {
   const page = await browser.newPage();
   await page.goto(`http://127.0.0.1:${server.address().port}/`);
-  const result = await page.evaluate(async ({ W, KBPS, POSTER_AT, FPS }) => {
+  const result = await page.evaluate(async ({ W, KBPS, POSTER_AT, FPS, DURATION }) => {
     const v = document.getElementById('v');
     if (v.readyState < 2) await new Promise((r) => (v.oncanplay = r));
     const H = Math.round((v.videoHeight / v.videoWidth) * W / 2) * 2;
@@ -60,14 +60,9 @@ try {
     await post('demo-poster.jpg', await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.85)));
     await post('demo-poster.webp', await new Promise((r) => c.toBlob(r, 'image/webp', 0.82)));
 
-    // The real length. Recorder-made MP4s can report a short duration until the
-    // whole file has been played, so play it through quickly and look again.
-    v.currentTime = 0;
-    await new Promise((r) => (v.onseeked = r));
-    v.playbackRate = 16;
-    await v.play();
-    await new Promise((r) => (v.onended = r));
-    const D = Math.max(v.currentTime, Number.isFinite(v.duration) ? v.duration : 0);
+    // Length. MediaRecorder MP4s can report a wrong one; pass --duration for those.
+    const D = DURATION || v.duration;
+    if (!Number.isFinite(D) || D <= 0) throw new Error('Unknown video length; pass --duration=<seconds>');
 
     // Re-encode frame by frame.
     const { Muxer, ArrayBufferTarget } = window.Mp4Muxer;
@@ -91,7 +86,7 @@ try {
     await post('demo.mp4', new Blob([muxer.target.buffer], { type: 'video/mp4' }));
     const mime = 'video/mp4 (H.264, ' + frames + ' frames)';
     return { W, H, duration: D, mime };
-  }, { W: WIDTH, KBPS, POSTER_AT, FPS });
+  }, { W: WIDTH, KBPS, POSTER_AT, FPS, DURATION });
   console.log(`✓ ${result.W}x${result.H}, ${result.duration.toFixed(1)} s, ${result.mime}`);
 } finally {
   await browser.close();

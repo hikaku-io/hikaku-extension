@@ -5,7 +5,7 @@
 <h1 align="center">Hikaku</h1>
 
 <p align="center">
-  <strong>Seeing is believing. Check anyway.</strong><br>
+  <strong>Spot signs of AI. As you browse.</strong><br>
   A browser extension that quietly flags AI-generated images and video, and shows you why. Everything runs on your device.
 </p>
 
@@ -25,7 +25,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/hover.png" width="820" alt="A feed post whose image is outlined in purple, with a card reading AI-generated, 98%.">
+  <img src="docs/images/hover.png" width="820" alt="A feed post with an AI-use declaration and its supporting metadata.">
 </p>
 
 > *hikaku* (比較) is Japanese for "comparison". The idea is to weigh what an image claims to be against the evidence it carries.
@@ -40,26 +40,26 @@
 | ✅ | **On-device visual model** | SwinV2 detector via ONNX Runtime; WebGPU (fp16) or WASM (uint8) |
 | ✅ | **Video**, including streamed (YouTube, TikTok…) | 3 sampled frames per visible video, median score |
 | ✅ | **Animated GIF / WebP** | First / middle / last frame, median score |
-| ✅ | **Screenshot & flat-graphic filter** | Chat captures, UI and slides aren't misread as AI |
+| ✅ | **Screenshot & flat-graphic filter** | Skips likely screenshots, UI and flat graphics before inference |
 | ✅ | **Flag styles** | Purple border (solid / double / dashed) or corner dot; hover card; details panel; Copy JSON |
 | ✅ | **Right-click → Inspect for AI generation** | Works on any image or video |
 | 🚧 | **Face-swap / deepfake detection** | Face finder + per-face model, [under evaluation](docs/MODELS.md#candidates-under-evaluation) |
-| 🚧 | **Smaller, broader model** | ~23 MB candidate trained on 4,800+ generators |
+| ✅ | **On-demand second opinion** | Separate 23 MB Community Forensics model; requested in image details, not an automatic replacement |
 | 📋 | **C2PA signature verification** | Today credentials are read, not cryptographically verified |
 | 📋 | **Platform AI labels** | YouTube "Altered or synthetic", TikTok/Meta "AI info" |
 | 📋 | **AI-written text detection** | |
-| 🚧 | **Store listings** | [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/hikaku/) submitted; Chrome Web Store and Edge Add-ons next |
+| 🚧 | **Store listings** | Check [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/hikaku/) for availability; browser-specific packages are on GitHub releases |
 
 ✅ working · 🚧 in progress · 📋 planned
 
 ## Install
 
-**Firefox** (140 or newer, desktop and Android): get it from [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/hikaku/). It updates itself.
+**Firefox** (desktop 140+, Android 142+): check [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/hikaku/) for availability, or use the Firefox package from the [latest release](https://github.com/hikaku-io/hikaku-extension/releases/latest).
 
-**Chrome and Edge:** the Chrome Web Store listing is in review. Until then, install from a release:
+**Chrome and Edge:** install from a release:
 1. Download `hikaku-x.y.z-chrome.zip` from the [latest release](https://github.com/hikaku-io/hikaku-extension/releases/latest) and unzip it.
 2. Open `chrome://extensions` (or `edge://extensions`), turn on **Developer mode**, click **Load unpacked**, and pick the unzipped folder.
-3. Browse. The first image kicks off a one-time model download (~400 MB with a GPU, ~200 MB without). The popup shows progress.
+3. Browse. The first image eligible for visual analysis starts a one-time model download (~400 MB with a GPU, ~200 MB without). The popup shows progress.
 
 From source:
 ```sh
@@ -71,9 +71,12 @@ On a locked-down network? `npm run build -- --offline` bundles the model, so not
 
 ## How it works
 
-1. **Provenance first.** We read Content Credentials, IPTC/XMP, EXIF and generator tags. If the file says it's AI-made, that's the answer.
-2. **Then the pixels.** Most social sites strip metadata, so when it's missing an on-device vision model scores the image. It skips screenshots and flat graphics, which it can't judge well.
-3. **Show the evidence.** Every flag lists its signals, sources and confidence. The model on its own can only say "likely AI". Saying "AI-generated" takes provenance.
+1. **Read declarations.** Content Credentials, IPTC/XMP, EXIF and generator tags describe what a file claims. Signatures and asset binding are not verified. Capture declarations do not suppress visual checks.
+2. **Check eligible pixels.** Small images, screenshots and flat graphics are filtered before the model loads. One in-memory fetch feeds metadata parsing and model preprocessing.
+3. **Show separate evidence.** AI-use declarations and model estimates remain distinct. Repeated metadata does not increase certainty; model scores and internal evidence weights are not calibrated confidence probabilities.
+4. **Request a second opinion.** In an image’s details, select **Get a second opinion**. This downloads a pinned 23 MB model once and shows its estimate separately. It catches some different failures but has lower overall recall, and remains optional.
+
+Balanced flags metadata declarations and high-scoring model estimates. Strict only flags explicit metadata declarations; it does not verify their authenticity.
 
 | Hover | Details panel | Settings |
 |---|---|---|
@@ -88,8 +91,8 @@ Nothing you browse leaves your device. There's no server, no account and no anal
 ## Accuracy and limits
 
 - No flag doesn't mean human-made. Most platforms strip metadata, and no model catches everything.
-- On real Reddit content ([hikaku-bench](https://github.com/hikaku-io/hikaku-bench), weak labels), the visual model caught **65%** of AI images with **6%** false positives (2.5% excluding film photography). For AI video it only caught **22%**. The image model doesn't carry over to video frames well yet.
-- Reddit strips Content Credentials and metadata from uploads, so on social media we're leaning entirely on the visual model.
+- In the historical Node evaluation of Reddit content ([hikaku-bench](https://github.com/hikaku-io/hikaku-bench), weak labels), the visual model caught **65%** of AI images with **6%** false positives (2.5% excluding film photography). For AI video it only caught **22%**. The image model doesn't carry over to video frames well yet.
+- No provenance survived in the 548-image Reddit sample. This is an observation about that sample, not a guarantee about every upload.
 - Known weak spots are film photography (25% false positives on r/analog), glossy product shots, 3D renders, face swaps on real photos (not detected yet) and AI video.
 
 Got one wrong? File a [detection report](https://github.com/hikaku-io/hikaku-extension/issues/new?template=detection_report.yml) with the panel's **Copy JSON** output.
@@ -100,7 +103,10 @@ Got one wrong? File a [detection report](https://github.com/hikaku-io/hikaku-ext
 npm test                         # unit tests
 npm run lint                     # ESLint
 npm run setup -- --model=uint8   # local model weights, needed by the next two
-npm run eval-model -- --n=16     # model sanity eval (Node)
+npm run eval-model -- --n=16     # sanity eval (Node resizing differs from browser canvas)
+npm run trace -- image.png       # actual browser pipeline; accepts files and URLs
+npm run trace -- --second-opinion image.png # optional second model
+npm run setup -- --model=secondary # optional bundled second-opinion weights
 npm run e2e                      # full pipeline in Chrome for Testing (EXT_DIR=dist/... to test a build)
 npm run screenshots              # regenerate docs/images (README) screenshots
 ```

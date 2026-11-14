@@ -16,10 +16,15 @@
 // against the boxes during fast scrolls and let text show through.
 //
 // Crossfades are the weak spot: two frames blended together leave text a person
-// can still read but OCR can't. Pass those time ranges with --full and the whole
-// frame is blurred there.
+// can still read but OCR can't. So the whole frame is blurred for CUT_PAD seconds
+// around every cut the scroll tracking finds, and around any extra ranges passed
+// with --full.
 //
-// Usage: node scripts/blur-listings.mjs <in.mp4> <out.mp4> [--from=0] [--to=end] [--fps=15] [--rate=30] [--full=1.6-3.1,17.9-19.5]
+// --mode=fake leaves prices and photos alone and only swaps each card's street
+// address for an obviously made-up one ("212 Example Ct"). Each card keeps the
+// same fake address for as long as it's on screen.
+//
+// Usage: node scripts/blur-listings.mjs <in.mp4> <out.mp4> [--from=0] [--to=end] [--fps=15] [--rate=30] [--full=1.6-3.1,17.9-19.5] [--mode=blur|fake]
 import puppeteer from 'puppeteer';
 import http from 'node:http';
 import { createReadStream, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
@@ -30,6 +35,7 @@ const [input, output] = args.filter((a) => !a.startsWith('--'));
 const opt = (k, d) => { const v = args.find((a) => a.startsWith(`--${k}=`))?.split('=')[1]; return v == null ? d : Number(v); };
 const FROM = opt('from', 0), TO = opt('to', Infinity), FPS = opt('fps', 15);
 const RATE = opt('rate', 30);
+const MODE = args.find((a) => a.startsWith('--mode='))?.slice(7) || 'blur';
 const FULL = (args.find((a) => a.startsWith('--full='))?.slice(7) || '').split(',').filter(Boolean).map((r) => r.split('-').map(Number));                 // output frame rate
 const STEP = Math.max(1, Math.round(RATE / FPS)); // OCR every STEP-th frame
 const at = (n) => (n + 0.5) / RATE;          // seek to the middle of frame n so we land on it, not its neighbour
@@ -104,6 +110,22 @@ try {
   const total = samples.reduce((n, s) => n + s.boxes.length, 0);
   console.log(`found ${total} price boxes in ${samples.length} frames`);
 
+  // ---- 1a. OCR sometimes merges a price with the line under it, which makes
+  // its box twice as tall. All prices on screen share one size, so size every box
+  // from the median price height around that moment.
+  const phOf = (b) => b.h / 5.1;
+  for (const [i, sm] of samples.entries()) {
+    const near = samples.slice(Math.max(0, i - 4), i + 5).flatMap((o) => o.boxes.map(phOf)).sort((a, b) => a - b);
+    if (!near.length) continue;
+    const med = near[Math.floor(near.length * 0.25)]; // low quantile: merged boxes only ever come out too big
+    sm.boxes = sm.boxes.map((b) => {
+      const ph = phOf(b);
+      if (ph < med * 1.25 && ph > med * 0.8) return b;
+      const x0 = b.x + ph * 0.5, y0 = b.y + ph * 0.45, cardW = b.w - ph * 0.4;
+      return { x: x0 - med * 0.5, y: y0 - med * 0.45, w: cardW + med * 0.4, h: med * 5.1 };
+    });
+  }
+
   // ---- 1b. fill gaps: OCR sometimes misses a price in a frame or two. If a box
   // exists shortly before and after (matched by position), insert the in-between box.
   const center = (b) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
@@ -173,14 +195,34 @@ try {
     else Y += motion[i].dy;
     Object.assign(s, { Y, seg, dy: i && motion[i].err <= CUT ? motion[i].dy : 0 });
   });
-  console.log(`scroll: ${samples.filter((s) => s.dy).length} moving samples, ${seg} cut(s)`);
+  const CUT_PAD = 0.4;
+  for (let i = 1; i < samples.length; i++) if (samples[i].seg !== samples[i - 1].seg) FULL.push([samples[i - 1].t - CUT_PAD, samples[i].t + CUT_PAD]);
+  console.log(`scroll: ${samples.filter((s) => s.dy).length} moving samples, ${seg} cut(s); full-frame blur at ${FULL.map(([a, b]) => `${a.toFixed(1)}-${b.toFixed(1)}`).join(', ')}`);
 
-  // ---- 2. render every frame offline with the boxes blurred
-  const mime = await page.evaluate(async ({ samples, WINDOW, RATE, FULL }) => {
+  // ---- 1d. give every card an id, so it keeps one fake address. Cards are told
+  // apart by their position on the page (screen position minus scroll).
+  const clusters = [];
+  for (const s of samples) for (const b of s.boxes) {
+    const px = b.x, py = b.y - s.Y;
+    let c = clusters.find((k) => k.seg === s.seg && Math.abs(k.py - py) < b.h * 0.3 && Math.abs(k.px - px) < b.w * 0.3);
+    if (!c) clusters.push((c = { id: clusters.length, seg: s.seg, px, py, n: 0 }));
+    c.px = (c.px * c.n + px) / (c.n + 1); c.py = (c.py * c.n + py) / (c.n + 1); c.n++;
+    b.id = c.id;
+  }
+  // Nothing gets drawn above the highest price seen on this page: that's where
+  // the sticky header starts, and cards scrolling under it are hidden.
+  // (The header doesn't scroll, so this is a screen position per segment.)
+  const tops = {};
+  for (const s of samples) for (const b of s.boxes) tops[s.seg] = Math.min(tops[s.seg] ?? Infinity, b.y + phOf(b) * 0.45);
+  for (const s of samples) s.top = (tops[s.seg] ?? 0) - 2;
+  if (MODE === 'fake') console.log(`${clusters.length} cards get a made-up address`);
+
+  // ---- 2. render every frame offline with the boxes blurred (or addresses replaced)
+  const mime = await page.evaluate(async ({ samples, WINDOW, RATE, FULL, MODE }) => {
     const v = document.getElementById('v');
     const W = v.videoWidth & ~1, H = v.videoHeight & ~1;
     const c = Object.assign(document.createElement('canvas'), { width: W, height: H });
-    const x = c.getContext('2d');
+    const x = c.getContext('2d', { willReadFrequently: true });
     // Page offset at time t: the sample's offset plus a share of the next step.
     const where = (t) => {
       const i = samples.findIndex((s) => s.t > t + 1e-6);
@@ -194,9 +236,37 @@ try {
       const here = where(t), out = [];
       for (const s of samples) {
         if (Math.abs(s.t - t) > WINDOW || s.seg !== here.seg) continue;
-        for (const b of s.boxes) out.push({ ...b, y: b.y + (here.Y - s.Y) - b.h * 0.5, h: b.h * 1.8 }); // padded: fast scrolls blend frames and tracking can be off by a line
+        for (const b of s.boxes) out.push({ ...b, x: b.x - b.w * 0.03, w: b.w * 1.15, y: b.y + (here.Y - s.Y) - b.h * 0.5, h: b.h * 1.8 }); // padded: fast scrolls blend frames and tracking can be off by a line
       }
       return out;
+    };
+
+    // Fake mode: one box per card, taken from the nearest sample and moved by the scroll.
+    const STREETS = ['101 Example Ave', '212 Sample Ct', '318 Placeholder Ln', '425 Demo Dr', '537 Mockup Loop', '642 Fictional Trl', '759 Specimen St', '864 Prototype Pl', '973 Sandbox Rd', '1080 Template Ter', '1191 Standin Cv', '1203 Rehearsal Way', '1314 Pretend Path', '1427 Makebelieve Blvd', '1536 Dummy Ridge Dr', '1648 Test Hollow Ln'];
+    const cardsAt = (t) => {
+      const here = where(t), best = new Map();
+      for (const s of samples) {
+        const d = Math.abs(s.t - t);
+        if (d > Math.min(WINDOW, 0.1) || s.seg !== here.seg) continue; // tight: zooms aren't tracked, only scrolls
+        for (const b of s.boxes) if (!best.has(b.id) || best.get(b.id).d > d) best.set(b.id, { d, b: { ...b, y: b.y + (here.Y - s.Y) } });
+      }
+      return { top: samples.find((s) => s.seg === here.seg)?.top ?? 0, cards: [...best.values()].map((e) => e.b) };
+    };
+    const fakeAddress = (b) => {
+      // Back out the price's own box from the card box (see the OCR step), then
+      // cover the address line, which sits 3.4 to 4.3 price-heights below the price.
+      const ph = b.h / 5.1, x0 = b.x + ph * 0.5, y0 = b.y + ph * 0.45, cardW = b.w - ph * 0.4;
+      const rx = x0 - ph * 0.15, ry = y0 + ph * 3.42, rw = Math.max(ph * 6, cardW - ph * 0.5), rh = ph * 1.0;
+      const [r, g, bl] = x.getImageData(Math.round(x0 - ph * 0.3), Math.round(y0 + ph * 3.85), 1, 1).data;
+      x.fillStyle = `rgb(${r},${g},${bl})`;
+      x.fillRect(rx, ry, rw, rh);
+      x.save();
+      x.beginPath(); x.rect(rx, ry, rw, rh + ph * 0.15); x.clip();
+      x.fillStyle = 'rgba(78,78,78,0.9)';
+      x.font = `${(ph * 0.84).toFixed(1)}px "Segoe UI", Inter, Arial, sans-serif`;
+      x.textBaseline = 'alphabetic';
+      x.fillText(`${STREETS[b.id % STREETS.length]}, Buda, TX 78610`, x0, y0 + ph * 4.1);
+      x.restore();
     };
 
     const { Muxer, ArrayBufferTarget } = window.Mp4Muxer;
@@ -211,7 +281,8 @@ try {
       v.currentTime = t;
       await new Promise((r) => (v.onseeked = r));
       x.drawImage(v, 0, 0, W, H);
-      if (FULL.some(([a, b]) => t >= a && t <= b)) { x.filter = 'blur(24px)'; x.drawImage(v, 0, 0, W, H); x.filter = 'none'; }
+      if (FULL.some(([a, b]) => t >= a && t <= b)) { x.filter = MODE === 'fake' ? 'blur(12px)' : 'blur(24px)'; x.drawImage(v, 0, 0, W, H); x.filter = 'none'; }
+      else if (MODE === 'fake') { const { top, cards } = cardsAt(t); x.save(); x.beginPath(); x.rect(0, top, W, H - top); x.clip(); for (const b of cards) fakeAddress(b); x.restore(); }
       else for (const b of boxesAt(t)) {
         x.save();
         x.beginPath(); x.rect(b.x, b.y, b.w, b.h); x.clip();
@@ -230,7 +301,7 @@ try {
     muxer.finalize();
     await fetch('/save', { method: 'POST', body: muxer.target.buffer });
     return `video/mp4 (avc, ${frames} frames)`;
-  }, { samples, WINDOW, RATE, FULL });
+  }, { samples, WINDOW, RATE, FULL, MODE });
   console.log(`✓ ${output} (${mime}, ${(statSync(output).size / 1048576).toFixed(1)} MB)`);
 } finally {
   await worker.terminate();

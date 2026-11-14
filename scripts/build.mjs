@@ -11,7 +11,7 @@ import { cpSync, rmSync, mkdirSync, existsSync, readFileSync, writeFileSync, sta
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
-import { MODEL, localPath } from '../lib/model-config.js';
+import { MODEL, SECONDARY_MODEL, localPath } from '../lib/model-config.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');
@@ -23,6 +23,7 @@ const manifest = JSON.parse(readFileSync(join(ROOT, 'manifest.json'), 'utf8'));
 const COMMON = [
   'LICENSE',
   'NOTICE',
+  'third_party/community-forensics/LICENSE',
   'background.js',
   'icons/icon16.png', 'icons/icon32.png', 'icons/icon48.png', 'icons/icon128.png',
   'content',
@@ -33,6 +34,7 @@ const COMMON = [
   'lib/runner.js',
   'lib/model-config.js',
   'lib/preprocess.js',
+  'lib/work-queue.js',
 ];
 
 // Firefox differences:
@@ -65,6 +67,7 @@ const extra = [];
 if (offline) {
   execFileSync(process.execPath, [join(ROOT, 'scripts/setup.mjs'), '--model=all'], { stdio: 'inherit' });
   for (const v of Object.keys(MODEL.variants)) extra.push(localPath(v));
+  extra.push(localPath('int8', SECONDARY_MODEL));
 }
 
 const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]));

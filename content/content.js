@@ -23,15 +23,15 @@
   let scanned = 0;
 
   const VERDICTS = {
-    ai: { label: 'AI-generated', tone: 'ai' },
-    'ai-edited': { label: 'Edited with AI', tone: 'edited' },
+    ai: { label: 'AI generation declared', tone: 'ai' },
+    'ai-edited': { label: 'AI editing declared', tone: 'edited' },
     'likely-ai': { label: 'Likely AI-generated', tone: 'likely' },
     uncertain: { label: 'Weak AI signals', tone: 'neutral' },
     none: { label: 'No AI signals found', tone: 'neutral' },
     captured: { label: 'Camera capture declared', tone: 'neutral' },
     error: { label: 'Could not analyze', tone: 'neutral' },
   };
-  const SOURCE_LABEL = { c2pa: 'C2PA', xmp: 'XMP', exif: 'EXIF', png: 'PNG', video: 'Video', classifier: 'Model' };
+  const SOURCE_LABEL = { c2pa: 'C2PA', xmp: 'XMP', exif: 'EXIF', png: 'PNG', video: 'Video', classifier: 'Model', 'secondary-classifier': 'Second model' };
 
   // ------------------------------------------------------------ DOM helpers
 
@@ -214,6 +214,9 @@
         .then((r) => r || { url, kind, verdict: 'error', score: 0, signals: [], error: 'No response from extension' })
         .catch((err) => ({ url, kind, verdict: 'error', score: 0, signals: [], error: String(err?.message || err) }));
       requests.set(key, p);
+      p.then((r) => {
+        if ((r.verdict === 'error' || r.classifier?.status === 'error') && requests.get(key) === p) requests.delete(key);
+      });
     }
     return p;
   }
@@ -276,12 +279,23 @@
     if (isDecorative(el)) return skip('decorative/backdrop');
 
     const kind = kindOf(el);
+    const generation = s.generation = (s.generation || 0) + 1;
+    if (s.retryUrl !== url) { s.retryUrl = url; s.retries = 0; }
     Object.assign(s, { url, kind, result: null });
     scanned++;
     analyze(url, kind).then((res) => {
-      if (s.url !== url) return; // src changed meanwhile
+      if (s.url !== url || s.generation !== generation) return;
       s.result = res;
       applyResult(el, res);
+      if ((res.verdict === 'error' || res.classifier?.status === 'error') && s.retries < 2) {
+        s.retries++;
+        setTimeout(() => {
+          const rect = el.getBoundingClientRect();
+          if (el.isConnected && settings.enabled && s.result === res && s.generation === generation && rect.bottom >= -400 && rect.top <= innerHeight + 400) {
+            s.url = null; consider(el);
+          }
+        }, 1000 * s.retries);
+      }
     });
   }
 
@@ -307,19 +321,19 @@
     if (!url || url === s.url || !/^(https?|data|blob):/i.test(url)) return;
     const r = el.getBoundingClientRect();
     if (r.width < MIN_VIDEO || r.height < MIN_VIDEO * 0.5) return;
+    const generation = s.generation = (s.generation || 0) + 1;
     Object.assign(s, { url, kind: 'video', result: null });
     scanned++;
 
     const meta = url.startsWith('blob:') ? Promise.resolve(null) : analyze(url, 'video');
     meta.then(async (res) => {
-      if (s.url !== url) return;
+      if (s.url !== url || s.generation !== generation) return;
       if (res) { s.result = res; applyResult(el, res); }
-      if (res && (res.verdict === 'ai' || res.verdict === 'captured')) return; // provenance settled it
       if (!settings.visualModel) return;
       const { frames, times } = await sampleFrames(el, url);
-      if (s.url !== url || !frames.length) return;
+      if (s.url !== url || s.generation !== generation || !settings.visualModel || !frames.length) return;
       const out = await chrome.runtime.sendMessage({ type: 'analyzeFrames', url, frames, times }).catch(() => null);
-      if (s.url !== url || !out) return;
+      if (s.url !== url || s.generation !== generation || !out) return;
       s.result = out;
       applyResult(el, out);
     });
@@ -428,7 +442,7 @@
     const radius = getComputedStyle(el).borderRadius;
     m.style.borderRadius = isDot() ? radius : `calc(${radius.split(' ')[0] || '0px'} + ${BORDER_GAP + 2}px)`;
     m._handle.textContent = isDot() ? '' : TAG_TEXT[v.tone] || 'AI';
-    m._handle.setAttribute('aria-label', `${v.label} (${pct(res.score)}). Show details`);
+    m._handle.setAttribute('aria-label', `${v.label}. Show evidence`);
     mount();
     schedulePosition();
     ensureTicker();
@@ -574,7 +588,7 @@
     const v = VERDICTS[res.verdict] || VERDICTS.none;
     const top = res.signals.filter((s) => s.strength > 0).slice(0, 3);
     fill(tip,
-      h('div', { class: 'head' }, chip(v), h('span', { class: 'score' }, pct(res.score))),
+      h('div', { class: 'head' }, chip(v)),
       top.length ? h('ul', null, top.map((s) => h('li', null, s.label))) : null,
       h('div', { class: 'foot' }, isDot() ? 'Click the dot for full details' : 'Click the AI tag for full details'),
     );
@@ -655,16 +669,18 @@
     const v = VERDICTS[result.verdict] || VERDICTS.none;
     const md = result.metadata || {};
     const c2pa = md.c2pa;
-    const flaggedish = ['ai', 'ai-edited', 'likely-ai', 'uncertain'].includes(result.verdict);
     const dims = el
       ? (el.tagName === 'VIDEO' ? (el.videoWidth ? `${el.videoWidth} × ${el.videoHeight}` : '') : `${el.naturalWidth} × ${el.naturalHeight}`)
       : '';
 
     let explain;
     if (result.verdict === 'error') explain = result.error || 'Unknown error';
-    else if (result.verdict === 'none') explain = 'We found no signs of AI in this file. That does not prove a person made it, because many sites strip metadata when you upload.';
+    else if (result.classifier?.status === 'skipped' && !['ai', 'ai-edited'].includes(result.verdict)) explain = `Visual analysis skipped: ${result.classifier.reason}. This is not evidence that the image is human-made.`;
+    else if (result.classifier?.status === 'error') explain = `Visual analysis failed: ${result.classifier.reason}. Metadata evidence is shown below; the image has not been fully checked.`;
+    else if (result.verdict === 'none') explain = 'No strong AI signals were found. Missing metadata and a low model score do not prove that a person made it.';
     else if (result.verdict === 'captured') explain = 'Embedded credentials declare a camera capture. Signatures are not verified locally.';
-    else { const n = result.signals.filter((s) => s.strength > 0).length; explain = `Based on ${n} signal${n === 1 ? '' : 's'}. Detection is probabilistic.`; }
+    else if (result.evidence === 'metadata-declaration') explain = 'File metadata declares AI use. These declarations are editable; signatures and asset binding have not been verified.';
+    else explain = 'The visual model estimates that this image may be AI-generated. Its score is not a calibrated probability or proof.';
 
     const textEntries = Object.entries(md.text || {});
     const raw = [
@@ -676,9 +692,7 @@
     fill(panel, top, h('div', { class: 'p-body' },
       h('div', { class: 'hero' },
         h('div', { class: 'hero-row' },
-          chip(v),
-          flaggedish ? h('span', { class: 'big' }, pct(result.score), h('small', null, 'confidence')) : null),
-        flaggedish ? h('div', { class: 'meter' }, h('i', { style: `width:${pct(result.score)}` })) : null,
+          chip(v)),
         h('div', { class: 'sub' }, explain),
         url ? h('div', { class: 'url', title: url }, url) : null),
 
@@ -686,7 +700,6 @@
         ? h('ul', { class: 'sigs' }, result.signals.map((s) => h('li', null,
             h('div', { class: 'sig-top' },
               h('span', null, s.label),
-              s.strength > 0 && s.source !== 'classifier' ? h('span', { class: 'pct' }, pct(s.strength)) : null,
               h('span', { class: 'badge' }, SOURCE_LABEL[s.source] || s.source)),
             s.detail ? h('div', { class: 'detail' }, s.detail) : null)))
         : null),
@@ -712,6 +725,27 @@
         ['Visual model', describeClassifier(result.classifier)],
         ['Analysis time', result.ms != null ? `${result.ms} ms` : ''],
       ])),
+
+      section('Second opinion', kind !== 'video' && settings.visualModel && result.classifier?.status === 'ok' && !result.classifier.animated ? h('div', null,
+        result.classifier?.secondary ? h('p', { class: 'note' }, describeClassifier(result.classifier.secondary), '. Model scores are uncalibrated and can disagree.') : null,
+        !result.classifier?.secondary || result.classifier.secondary.status === 'error' ? h('button', {
+          class: 'btn', type: 'button',
+          onclick: async (event) => {
+            const button = event.currentTarget;
+            button.disabled = true;
+            button.textContent = 'Checking with the second model…';
+            const fresh = await chrome.runtime.sendMessage({ type: 'analyze', url, kind: 'image', secondOpinion: true }).catch(() => null);
+            if (!button.isConnected || panel.hidden) return;
+            if (!fresh || fresh.verdict === 'error') {
+              button.disabled = false; button.textContent = 'Could not check. Try again'; return;
+            }
+            const state = el && info.get(el);
+            if (state?.url === url) { state.result = fresh; applyResult(el, fresh); }
+            openPanel({ el, url, kind, result: fresh });
+          },
+        }, 'Get a second opinion') : null,
+        h('p', { class: 'note' }, 'Downloads a separate 23 MB model on first use. Analysis stays on your device. A second model can also be wrong.'),
+      ) : null),
 
       section('EXIF', rows(Object.entries(md.exif || {}).map(([k, val]) => [k, String(val).slice(0, 300)]))),
 
@@ -756,6 +790,12 @@
   function track(el) {
     if (info.has(el)) return;
     info.set(el, { url: null, kind: null, result: null });
+    // Media readiness events are not composed across shadow roots. Listen on
+    // each element so initially empty players and later source swaps are seen.
+    el.addEventListener(el.tagName === 'VIDEO' ? 'loadedmetadata' : 'load', () => {
+      const state = info.get(el);
+      if (state && mediaUrl(el) !== state.url) { removeMarker(el); consider(el); }
+    });
     io.observe(el);
   }
 
@@ -797,18 +837,6 @@
     if (rootNode.shadowRoot) watchRoot(rootNode.shadowRoot);
     if (rootNode.childElementCount) findShadowRoots(rootNode);
   }
-
-  // Responsive images (srcset) and src swaps: re-check after a new load.
-  addEventListener('load', (e) => {
-    const t = e.target;
-    const s = t && info.get(t);
-    if (s?.url && mediaUrl(t) !== s.url) { removeMarker(t); consider(t); }
-  }, true);
-  addEventListener('loadedmetadata', (e) => {
-    const t = e.target;
-    const s = t && info.get(t);
-    if (t?.tagName === 'VIDEO' && s?.url && mediaUrl(t) !== s.url) { removeMarker(t); consider(t); }
-  }, true);
 
   function refreshAll() {
     for (const el of allMedia()) {
@@ -909,6 +937,14 @@
     if (area === 'local' && changes.uiScheme) { uiScheme = changes.uiScheme.newValue; applyTheme(); }
     if (area !== 'sync') return;
     for (const [k, { newValue }] of Object.entries(changes)) if (k in settings) settings[k] = newValue;
+    if (changes.visualModel) {
+      requests.clear();
+      for (const el of allMedia()) {
+        const state = info.get(el);
+        if (state) { state.url = null; state.result = null; state.generation = (state.generation || 0) + 1; }
+        removeMarker(el);
+      }
+    }
     applyTheme();
     refreshAll();
   });

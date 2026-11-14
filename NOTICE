@@ -20,3 +20,12 @@ AI image detection model "ai-image-detector-deploy"
   (revision 0df8696b5db0ab5bd72baeab571fec55d65128e7)
   Not bundled by default: downloaded on first use from Hugging Face, or bundled
   into "--offline" builds under models/ai-image-detector/.
+
+--------------------------------------------------------------------------------
+Community Forensics ViT (optional second-opinion model)
+  Jeongsoo Park and Andrew Owens; Hugging Face/ONNX integration by Borderless.
+  MIT License. See third_party/community-forensics/LICENSE.
+  https://github.com/JeongsooP/Community-Forensics
+  https://huggingface.co/buildborderless/CommunityForensics-DeepfakeDet-ViT
+  revision ac6ee457bea904a373065754107451793b56db00
+  Downloaded only on explicit second-opinion requests; bundled in offline builds.

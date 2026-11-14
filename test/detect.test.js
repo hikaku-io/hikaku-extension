@@ -177,10 +177,56 @@ test('Classifier skipped/error results are ignored', async () => {
   assert.equal(evaluate(md, { status: 'skipped', reason: 'x' }).signals.length, 0);
 });
 
-test('Classifier corroborates weaker metadata evidence', async () => {
+test('A classifier cannot promote a weak declaration to a verified claim or invent an edit', async () => {
   const md = await extractMetadata(png(pngChunk('tEXt', bytes('Title', [0], 'AI generated image'))));
   assert.equal(evaluate(md).verdict, 'likely-ai');            // phrase alone: 0.75
-  assert.equal(evaluate(md, clf(0.95)).verdict, 'ai');        // combined via noisy-OR
+  assert.equal(evaluate(md, clf(0.95)).verdict, 'likely-ai');
+  assert.equal(evaluate(md, clf(0.75)).verdict, 'likely-ai');
+  assert.equal(evaluate(md, clf(0.95)).verified, false);
+});
+
+test('Repeated generator metadata does not inflate evidence strength', async () => {
+  const md = await noMeta();
+  md.exif.Software = 'ComfyUI';
+  const single = evaluate(md);
+  md.xmpFields.CreatorTool = 'ComfyUI';
+  const repeated = evaluate(md, clf(0.99));
+  assert.equal(repeated.score, single.score);
+  assert.equal(repeated.verdict, 'ai');
+  assert.equal(repeated.evidence, 'metadata-declaration');
+  assert.equal(repeated.verified, false);
+});
+
+test('A camera-capture declaration does not override a positive visual result', async () => {
+  const md = await noMeta();
+  md.xmpFields.sourceTypes = ['digitalCapture'];
+  assert.equal(evaluate(md).verdict, 'captured');
+  assert.equal(evaluate(md, clf(0.99)).verdict, 'likely-ai');
+  assert.equal(evaluate(md, clf(0.99)).verified, false);
+});
+
+test('Only an explicit editing declaration produces AI-edited', async () => {
+  const md = await noMeta();
+  md.xmpFields.sourceTypes = ['compositeWithTrainedAlgorithmicMedia'];
+  assert.equal(evaluate(md, clf(0.99)).verdict, 'ai-edited');
+  assert.equal(evaluate(md, clf(0.01)).verdict, 'ai-edited');
+});
+
+test('Invalid classifier scores cannot affect the result', async () => {
+  const md = await noMeta();
+  for (const score of [NaN, Infinity, -1, 2]) assert.equal(evaluate(md, clf(score)).verdict, 'none');
+});
+
+test('A second model stays a separate estimate and can recover a primary miss', async () => {
+  const md = await noMeta();
+  const models = { ...clf(0.02), secondary: { ...clf(0.999), model: 'second test model' } };
+  const r = evaluate(md, models);
+  assert.equal(r.verdict, 'likely-ai');
+  assert.equal(r.evidence, 'model-estimate');
+  assert.equal(r.verified, false);
+  assert.ok(r.signals.some((s) => s.source === 'secondary-classifier'));
+  models.score = 0.8; models.secondary.score = 0.8;
+  assert.equal(evaluate(md, models).verdict, 'uncertain'); // two weak estimates do not compound
 });
 
 // ---------------------------------------------------------------- screenshot / graphic detection

@@ -5,6 +5,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- Metadata declarations and visual estimates remain separate. Duplicate declarations no longer compound; weak metadata plus a model cannot invent an AI-editing verdict. Uncalibrated confidence percentages are removed from the summary UI.
+- Tiny images and flat graphics are filtered before downloading/loading a model. Metadata and inference share one in-memory image fetch.
+- Unsigned camera declarations no longer suppress visual checks. Metadata-only Strict mode is described as declarations, not verification.
+- Separate bounded queues keep video metadata responsive; explicit inspections are promoted and queued work is cancelled after navigation when no other tab needs it. Transient failures can retry and settings changes invalidate stale results.
+- Videos that receive their initial source after entering the viewport are checked when metadata loads.
+
+### Added
+- Optional 23 MB Community Forensics second opinion for still images, with its own estimate and an explicit first-use download notice.
+- Browser-native file/URL diagnostics (`npm run trace`), full model comparison tooling in hikaku-bench, and regression checks for evidence handling, cold-start skips, fetch reuse, and queue scheduling.
+
 ## [0.1.0] - 2026-11-14
 
 First public release.

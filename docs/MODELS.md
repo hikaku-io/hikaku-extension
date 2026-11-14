@@ -55,10 +55,28 @@ Browser timing (end-to-end test): ~70–200 ms per image with fp16 on WebGPU (so
 5. **Signal**: the model contributes its own labelled signal in `lib/score.js` with a conservative strength, so users can see which model said what.
 6. Update this file and `NOTICE`.
 
-## Candidates under evaluation
+## Optional second opinion and comparison
 
 | Model | Role | Size | License | Notes |
 |---|---|---|---|---|
-| [CommunityForensics-DeepfakeDet-ViT](https://huggingface.co/buildborderless/CommunityForensics-DeepfakeDet-ViT) | General AI-image detector (2nd opinion or replacement) | 23 MB (int8) | MIT | Trained on 4,803 generators (CVPR 2025). Could cut the download ~95%. |
+| [CommunityForensics-DeepfakeDet-ViT](https://huggingface.co/buildborderless/CommunityForensics-DeepfakeDet-ViT) | Optional second opinion in still-image details | 23 MB (int8) | MIT | Pinned to `ac6ee457bea904a373065754107451793b56db00`; not a default replacement. |
 | UltraFace RFB-320 | Face detection gate | ~1 MB | MIT | Runs only to find faces for the next stage. |
 | [AI-vs-Deepfake-vs-Real](https://huggingface.co/prithivMLmods/AI-vs-Deepfake-vs-Real-ONNX) | Per-face swap/deepfake check | 57 MB (q4) | Apache-2.0 | Self-reported 99% in-distribution; needs real-world eval on memes. |
+
+### Browser comparison, 2026-11-14
+
+All 548 local Reddit images, plus four user-provided examples excluded from metrics. Weak subreddit labels. Chrome 156, Ryzen 7 7800X3D, WASM/four threads; indicative single-inference timings, not a repeated hardware benchmark. Common graphic/minimum-size gates; browser canvas preprocessing. Node area-averaging produces materially different scores on some inputs, so Node results must not be presented as exact browser behavior.
+
+| Model | Weight bytes (MB) | Median inference | AI-labelled flagged / scored at 0.90 | Real-labelled flagged / scored |
+|---|---:|---:|---:|---:|
+| SwinV2 uint8 | 198.9 | 537 ms | 149/233 | 15/239 |
+| Community Forensics INT8 | 23.0 | 221 ms | 26/233 | 0/239 |
+| Community Forensics FP32 | 87.4 | 329 ms | 21/233 | 0/239 |
+
+An either-model policy flagged 154/233 AI-labelled images and 15/239 real-labelled images: five additional AI-labelled flags, with no additional real-labelled flags in this sample. This does not establish a general false-positive rate. The second model remains explicit and optional: its default threshold is conservative, adds work, and the weak labels are insufficient to validate a new automatic policy.
+
+The second model resizes the shortest side to 440, center-crops to 384, applies CLIP normalization, and uses a single-logit sigmoid. It does not reuse SwinV2’s stretch, ImageNet normalization, or softmax. FP32 and quantized results can differ; revisions and variants are pinned.
+
+Reproduce from `hikaku-bench`: `npm run compare -- --examples=/path/to/local/examples`. Results, model weights and media remain local and gitignored. The comparison also reports an experiment on saved video scores: any-frame pooling flags 9/18 AI-labelled videos versus 4/18 for the median, but only six real-labelled videos exist. The default remains median pooling pending a suitable evaluation.
+
+Diagnose a file or URL through the real extension with `npm run trace -- --second-opinion image.png` (`--wasm` forces CPU). A second model can also be confidently wrong; no image URL, filename or subreddit is used as ground-truth evidence by the extension.

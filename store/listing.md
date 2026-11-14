@@ -19,13 +19,13 @@ Copy-paste text for both stores. Keep the claims here in line with what the exte
 > Hikaku puts a quiet outline around AI-generated images and video while you browse, and shows you why it flagged each one.
 >
 > How it works
-> • It first reads what the file says about itself: Content Credentials (C2PA), IPTC "AI-generated" labels and the tags some generators leave behind. If a file says it was made with AI, that's the answer.
+> • It first reads what the file says about itself: Content Credentials (C2PA), IPTC "AI-generated" labels and the tags some generators leave behind. These are editable declarations, not verified proof.
 > • Most sites strip that information, so Hikaku also runs a small AI-image detection model directly on your device.
 > • Hover a flagged image for a short summary. Click the tag, or right-click any image and choose "Inspect for AI generation", to see every signal and its source.
 >
 > What you can set
 > • A purple outline or a small dot
-> • Balanced or Strict (Strict only flags images with proof in their metadata)
+> • Balanced or Strict (Strict only flags explicit AI-use declarations in metadata; signatures are not verified)
 > • Light, dark or matching Chrome
 >
 > Privacy

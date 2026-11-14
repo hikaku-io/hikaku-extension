@@ -14,7 +14,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
   if (msg.type === 'classify') {
-    classify(msg.url).then(sendResponse, (err) => sendResponse({ status: 'error', reason: String(err?.message || err) }));
+    classify(msg.url, msg.inspect, msg.secondOpinion).then(sendResponse, (err) => sendResponse({ status: 'error', reason: String(err?.message || err) }));
     return true;
   }
   return false;

@@ -9,6 +9,7 @@ import { readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PNG } from 'pngjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const EXT = process.env.EXT_DIR || ROOT; // test a build with EXT_DIR=dist/hikaku-x.y.z
@@ -88,8 +89,20 @@ setTimeout(() => {
 }, 800);
 </script>`;
 
+const graphic = new PNG({ width: 256, height: 256 }); graphic.data.fill(255);
+const tiny = new PNG({ width: 16, height: 16 }); tiny.data.fill(255);
+let singleFetches = 0;
 const server = http.createServer((req, res) => {
   if (req.url === '/') { res.writeHead(200, { 'content-type': 'text/html' }); return res.end(page); }
+  if (req.url === '/graphic.png' || req.url === '/tiny.png') {
+    res.writeHead(200, { 'content-type': 'image/png' });
+    return res.end(PNG.sync.write(req.url === '/graphic.png' ? graphic : tiny));
+  }
+  if (req.url === '/single.jpg') {
+    singleFetches++;
+    res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'no-store' });
+    return res.end(readFileSync(images[0].file));
+  }
   if (req.url === '/anim.gif' && existsSync(join(CACHE, 'test-anim.gif'))) { res.writeHead(200, { 'content-type': 'image/gif' }); return res.end(readFileSync(join(CACHE, 'test-anim.gif'))); }
   if (req.url === '/c2pa.jpg') { res.writeHead(200, { 'content-type': 'image/jpeg' }); return res.end(box); }
   if (req.url.endsWith('-backdrop')) backdropRequests++;
@@ -125,13 +138,20 @@ try {
     p?.on('pageerror', (e) => console.log(`  [offscreen error] ${e.message}`));
   });
 
+  const ext = await browser.newPage();
+  await ext.goto(`chrome-extension://${extId}/popup/popup.html`);
+  for (const name of ['graphic', 'tiny']) {
+    const skipped = await ext.evaluate((u) => chrome.runtime.sendMessage({ type: 'analyze', url: u }), `${base}/${name}.png`);
+    const coldStatus = await ext.evaluate(() => chrome.runtime.sendMessage({ type: 'modelStatus' }));
+    check(skipped.classifier?.status === 'skipped' && coldStatus.state === 'idle', `${name} image skipped before loading the model`);
+  }
+  const single = await ext.evaluate((u) => chrome.runtime.sendMessage({ type: 'analyze', url: u }), `${base}/single.jpg`);
+  check(single.classifier?.status === 'ok' && singleFetches === 1, `metadata and classifier share a single fetch (${singleFetches} request)`);
+
   const tab = await browser.newPage();
   // Tall enough that every test video is on screen (videos are only sampled while visible).
   await tab.setViewport({ width: 1280, height: 1100 });
   await tab.goto(base, { waitUntil: 'load' });
-
-  const ext = await browser.newPage();
-  await ext.goto(`chrome-extension://${extId}/popup/popup.html`);
 
   // 1. Metadata path
   const c2pa = await ext.evaluate((u) => chrome.runtime.sendMessage({ type: 'analyze', url: u }), `${base}/c2pa.jpg`);
@@ -167,7 +187,7 @@ try {
     await tab.bringToFront();
     await new Promise((r) => setTimeout(r, 1000));
     stats = await getStats();
-    if (stats?.videos?.length >= 3) break;
+    if (stats?.videos?.length >= 3 && stats.videos.every((v) => v.frames >= 2)) break;
   }
   check(stats?.scanned >= images.length, `content script checked ${stats?.scanned} media, flagged ${stats?.flagged}`);
   // Match results to videos by their blob: address, not by list order.
@@ -218,6 +238,25 @@ try {
   await tab.mouse.click(r0.tx, r0.ty);
   await new Promise((r) => setTimeout(r, 400));
   await tab.screenshot({ path: join(SHOTS, '3-panel.png') });
+  // Optional network/model integration check: click the real control, including
+  // its closed-shadow-root accessibility node, and wait for separate evidence.
+  if (process.argv.includes('--second-opinion')) {
+    const client = await tab.createCDPSession();
+    await client.send('DOM.enable');
+    const tree = await client.send('Accessibility.getFullAXTree');
+    const button = tree.nodes.find((n) => n.role?.value === 'button' && n.name?.value === 'Get a second opinion');
+    if (!button?.backendDOMNodeId) throw new Error('Second-opinion button is not accessible');
+    const { model } = await client.send('DOM.getBoxModel', { backendNodeId: button.backendDOMNodeId });
+    await tab.mouse.click((model.border[0] + model.border[4]) / 2, (model.border[1] + model.border[5]) / 2);
+    let done = false;
+    for (let i = 0; i < 120; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      const next = await client.send('Accessibility.getFullAXTree');
+      if (next.nodes.some((n) => n.name?.value?.includes('Second model:'))) { done = true; break; }
+    }
+    check(done, 'second-opinion button runs the optional model and displays separate evidence');
+    await tab.screenshot({ path: join(SHOTS, '3b-second-opinion.png') });
+  }
   await tab.keyboard.press('Escape');
 
   // 5. Dot style

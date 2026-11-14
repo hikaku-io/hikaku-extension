@@ -1,6 +1,6 @@
 # Privacy Policy
 
-_Last updated: 2026-11-13_
+_Last updated: 2026-11-14_
 
 Nothing you browse leaves your device for analysis. There's no Hikaku server, no account, no analytics and no telemetry.
 
@@ -12,7 +12,7 @@ Nothing you browse leaves your device for analysis. There's no Hikaku server, no
 | Video frames | Up to 3 frames per visible video, drawn from the video element (or, for cross-origin video, a screenshot of just the video's on-screen area), analyzed locally, then discarded. | **No.** |
 | Analysis results | Kept in memory for the current browser session to avoid re-analyzing the same image. | **No.** |
 | Settings (on/off, flag style, sensitivity, model on/off) | Stored with `chrome.storage.sync`. | Synced by your browser vendor if you have browser sync enabled. Hikaku never sees it. |
-| Model weights | Downloaded **once** from `huggingface.co` (pinned version) and cached locally. Offline builds include them. | Hugging Face sees a normal download request (your IP address, user agent). No browsing data is included. |
+| Model weights | Downloaded from `huggingface.co` at pinned versions and cached locally. A separate 23 MB second-opinion model downloads only when explicitly requested. Offline builds include both models. | Hugging Face sees a normal download request (your IP address, user agent). No browsing data is included. |
 
 Hikaku does **not** collect, store or transmit: browsing history, page content, images, URLs, identifiers, or usage statistics.
 

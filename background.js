@@ -1,6 +1,7 @@
 import { extractMetadata } from './lib/metadata.js';
 import { evaluate } from './lib/score.js';
 import { classifyImage, modelStatus, warmupModel } from './lib/classifier.js';
+import { createWorkQueue } from './lib/work-queue.js';
 
 // ------------------------------------------------------------ settings
 
@@ -20,41 +21,42 @@ const CACHE_MAX = 800;
 // ------------------------------------------------------------ cache + queue
 
 const cache = new Map(); // key -> Promise<result>
-const queue = [];
-let active = 0;
+const imageQueue = createWorkQueue(MAX_CONCURRENT);
+const metadataQueue = createWorkQueue(MAX_CONCURRENT);
 
-function schedule(fn) {
-  return new Promise((resolve, reject) => {
-    queue.push({ fn, resolve, reject });
-    pump();
-  });
-}
-
-function pump() {
-  while (active < MAX_CONCURRENT && queue.length) {
-    const { fn, resolve, reject } = queue.shift();
-    active++;
-    fn().then(resolve, reject).finally(() => { active--; pump(); });
-  }
-}
-
-function analyze(url, kind = 'image') {
-  const key = `${kind}:${url}`;
+function analyze(url, kind = 'image', secondOpinion = false, tabId = null, priority = 0) {
+  const key = `${kind}:${url}${secondOpinion ? ':second-opinion' : ''}`;
   if (cache.has(key)) {
     const p = cache.get(key);
+    if (tabId != null) p.owners.add(tabId);
+    else p.pinned = true;
+    if (priority) p.job.promote();
     cache.delete(key);
     cache.set(key, p); // LRU bump
     return p;
   }
-  const p = schedule(() => analyzeNow(url, kind)).catch((err) => ({
+  const job = (kind === 'image' ? imageQueue : metadataQueue).schedule(() => analyzeNow(url, kind, secondOpinion), priority);
+  const p = job.promise.catch((err) => ({
     url, kind, verdict: 'error', score: 0, signals: [], error: String(err?.message || err),
   }));
+  p.job = job; p.owners = new Set(tabId == null ? [] : [tabId]); p.pinned = tabId == null;
   cache.set(key, p);
   // Don't cache transient failures (model still loading, a network blip), or they'd stick for the whole session.
-  p.then((r) => { if (r.verdict === 'error' || r.classifier?.status === 'error') cache.delete(key); });
+  p.then((r) => {
+    if ((r.verdict === 'error' || r.classifier?.status === 'error' || r.classifier?.secondary?.status === 'error') && cache.get(key) === p) cache.delete(key);
+  });
   if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value);
   return p;
 }
+
+function cancelQueuedForTab(tabId) {
+  for (const p of cache.values()) {
+    p.owners.delete(tabId);
+    if (!p.pinned && !p.owners.size) p.job.cancel();
+  }
+}
+chrome.tabs.onRemoved.addListener(cancelQueuedForTab);
+chrome.tabs.onUpdated.addListener((tabId, change) => { if (change.status === 'loading') cancelQueuedForTab(tabId); });
 
 // ------------------------------------------------------------ fetching
 
@@ -81,7 +83,7 @@ async function readCapped(res, cap) {
 }
 
 async function fetchImage(url) {
-  const res = await fetch(url, { credentials: 'include', cache: 'force-cache' });
+  const res = await fetch(url, { credentials: 'include', cache: 'force-cache', signal: AbortSignal.timeout(20_000) });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const len = Number(res.headers.get('content-length')) || 0;
   const bytes = await readCapped(res, MAX_IMAGE_BYTES);
@@ -89,7 +91,7 @@ async function fetchImage(url) {
 }
 
 async function fetchVideo(url) {
-  const head = await fetch(url, { credentials: 'include', headers: { Range: `bytes=0-${VIDEO_CHUNK - 1}` } });
+  const head = await fetch(url, { credentials: 'include', headers: { Range: `bytes=0-${VIDEO_CHUNK - 1}` }, signal: AbortSignal.timeout(20_000) });
   if (!head.ok) throw new Error(`HTTP ${head.status}`);
   const mime = head.headers.get('content-type') || '';
   const headBytes = await readCapped(head, VIDEO_CHUNK);
@@ -101,7 +103,7 @@ async function fetchVideo(url) {
   }
   let tailBytes = new Uint8Array(0);
   try {
-    const tail = await fetch(url, { credentials: 'include', headers: { Range: `bytes=-${VIDEO_CHUNK}` } });
+    const tail = await fetch(url, { credentials: 'include', headers: { Range: `bytes=-${VIDEO_CHUNK}` }, signal: AbortSignal.timeout(20_000) });
     if (tail.status === 206) tailBytes = await readCapped(tail, VIDEO_CHUNK);
   } catch { /* head alone is still useful */ }
   const bytes = new Uint8Array(headBytes.length + tailBytes.length);
@@ -110,25 +112,30 @@ async function fetchVideo(url) {
   return { bytes, mime, size: total, partial: true };
 }
 
-async function analyzeNow(url, kind) {
+async function analyzeNow(url, kind, secondOpinion = false) {
   if (url.startsWith('blob:')) {
     throw new Error(kind === 'video'
       ? 'Streamed video: the file itself cannot be downloaded for a metadata check'
       : 'blob: URLs cannot be fetched by the extension');
   }
   const t0 = performance.now();
+  await settingsReady;
+  if (kind === 'image' && settings.visualModel) {
+    // One in-memory fetch feeds both metadata parsing and visual analysis.
+    // No image bytes are persisted or serialized through runtime messaging.
+    const { metadata, ...classifier } = await classifyImage(url, true, secondOpinion);
+    if (!metadata) throw new Error(classifier.reason || 'Image analysis returned no metadata');
+    return { url, kind, ...evaluate(metadata, classifier), metadata, classifier, ms: Math.round(performance.now() - t0) };
+  }
   const { bytes, mime, size, partial } = kind === 'video' ? await fetchVideo(url) : await fetchImage(url);
   const metadata = await extractMetadata(bytes, { partial });
   metadata.mime = mime;
   metadata.size = size;
 
-  // Tier 2: the visual model. We skip it when provenance already settled things.
-  await settingsReady;
-  const fromMetadata = evaluate(metadata);
+  // Unsigned capture declarations never suppress an independent visual check.
   let classifier;
   if (kind !== 'image') classifier = { status: 'skipped', reason: 'video frames are sampled separately' };
   else if (!settings.visualModel) classifier = { status: 'off', reason: 'disabled in settings' };
-  else if (fromMetadata.verdict === 'ai' || fromMetadata.verdict === 'captured') classifier = { status: 'skipped', reason: 'provenance metadata is conclusive' };
   else if (/svg/.test(mime)) classifier = { status: 'skipped', reason: 'unsupported image type' };
   else classifier = await classifyImage(url).catch((err) => ({ status: 'error', reason: String(err?.message || err) }));
 
@@ -199,7 +206,7 @@ function captureFrame(windowId, rect, dpr) {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.target === 'offscreen') return false; // handled by the offscreen document
   if (msg?.type === 'analyze' && typeof msg.url === 'string') {
-    analyze(msg.url, msg.kind === 'video' ? 'video' : 'image').then(sendResponse);
+    analyze(msg.url, msg.kind === 'video' ? 'video' : 'image', msg.secondOpinion === true, _sender.tab?.id, msg.secondOpinion ? 1 : 0).then(sendResponse);
     return true; // async response
   }
   if (msg?.type === 'analyzeFrames' && Array.isArray(msg.frames)) {
@@ -259,6 +266,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     return;
   }
   await sendToFrame(tab.id, frameId, { type: 'showDetails', url: info.srcUrl, kind, loading: true });
-  const result = await analyze(info.srcUrl, kind);
+  const result = await analyze(info.srcUrl, kind, false, tab.id, 1);
   await sendToFrame(tab.id, frameId, { type: 'showDetails', url: info.srcUrl, kind, result });
 });

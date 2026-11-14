@@ -8,8 +8,8 @@ saveUiScheme();
 chromeDark.addEventListener('change', saveUiScheme);
 const $ = (id) => document.getElementById(id);
 const SENS_HINT = {
-  balanced: 'Flags confirmed AI content and images the visual model rates as likely AI.',
-  strict: 'Flags only content with provenance proof (Content Credentials, IPTC, generator metadata).',
+  balanced: 'Flags metadata declarations and images the visual model rates as likely AI.',
+  strict: 'Flags explicit AI declarations in file metadata. These declarations are not cryptographically verified.',
 };
 
 function render(s) {

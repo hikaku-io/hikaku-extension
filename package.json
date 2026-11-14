@@ -14,6 +14,7 @@
     "setup": "node scripts/setup.mjs",
     "postinstall": "node scripts/setup.mjs",
     "eval-model": "node scripts/eval-model.mjs",
+    "trace": "node scripts/trace-images.mjs",
     "e2e": "node scripts/e2e.mjs",
     "build": "node scripts/build.mjs",
     "lint": "eslint .",

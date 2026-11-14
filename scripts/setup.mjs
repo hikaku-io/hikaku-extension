@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { MODEL, remoteUrl, localPath } from '../lib/model-config.js';
+import { MODEL, SECONDARY_MODEL, remoteUrl, localPath } from '../lib/model-config.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ORT_DIST = join(ROOT, 'node_modules', 'onnxruntime-web', 'dist');
@@ -30,14 +30,16 @@ copyFileSync(join(ROOT, 'third_party', 'onnxruntime-web', 'LICENSE'), join(vendo
 console.log(`✓ ONNX Runtime Web → vendor/ort/ (${ORT_FILES.length} files)`);
 
 const arg = process.argv.find((a) => a.startsWith('--model='))?.split('=')[1];
-const variants = arg === 'all' ? Object.keys(MODEL.variants) : arg ? [arg] : [];
-for (const v of variants) {
-  if (!MODEL.variants[v]) { console.error(`Unknown model variant "${v}"`); process.exit(1); }
-  const dest = join(ROOT, localPath(v));
-  if (existsSync(dest) && statSync(dest).size > 1e6) { console.log(`✓ ${localPath(v)} already present`); continue; }
+const variants = arg === 'all' ? [...Object.keys(MODEL.variants), 'secondary'] : arg ? [arg] : [];
+for (const name of variants) {
+  const model = name === 'secondary' ? SECONDARY_MODEL : MODEL;
+  const v = name === 'secondary' ? 'int8' : name;
+  if (!model.variants[v]) { console.error(`Unknown model variant "${name}"`); process.exit(1); }
+  const dest = join(ROOT, localPath(v, model));
+  if (existsSync(dest) && statSync(dest).size > 1e6) { console.log(`✓ ${localPath(v, model)} already present`); continue; }
   mkdirSync(dirname(dest), { recursive: true });
-  console.log(`↓ ${v} model (~${MODEL.variants[v].approxMB} MB) from ${MODEL.repo}@${MODEL.revision.slice(0, 7)}`);
-  const res = await fetch(remoteUrl(v));
+  console.log(`↓ ${name} model (~${model.variants[v].approxMB} MB) from ${model.repo}@${model.revision.slice(0, 7)}`);
+  const res = await fetch(remoteUrl(v, model));
   if (!res.ok) { console.error(`Download failed: HTTP ${res.status}`); process.exit(1); }
   const total = Number(res.headers.get('content-length')) || 0;
   let done = 0, lastPct = -1;
@@ -49,6 +51,6 @@ for (const v of variants) {
   });
   await pipeline(body, createWriteStream(dest + '.part'));
   renameSync(dest + '.part', dest);
-  console.log(`✓ ${localPath(v)}`);
+  console.log(`✓ ${localPath(v, model)}`);
 }
 if (!variants.length) console.log('  (model not bundled, the extension will download it on first use)');

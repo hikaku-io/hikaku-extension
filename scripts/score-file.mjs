@@ -1,4 +1,5 @@
-// Score local image files exactly like the extension would (Node, WASM, uint8).
+// Node/WASM diagnostic. Area-averaging resize differs from browser canvas.
+// For the actual extension pipeline, use npm run trace -- <file or URL>.
 // Usage: node scripts/score-file.mjs <image.jpg|png> [...]
 import * as ort from 'onnxruntime-web';
 import jpeg from 'jpeg-js';
