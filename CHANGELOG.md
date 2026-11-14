@@ -5,19 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
-### Added
-- Firefox support (Firefox 140+). One build now makes both packages: `hikaku-<version>-chrome.zip` and `hikaku-<version>-firefox.zip`. In Firefox the model runs in the background page, since Firefox has no offscreen documents.
-- Store kit in `store/`: listing text, permission justifications, reviewer notes, and screenshots and promo tiles at the sizes the stores require (`npm run store-assets`).
-
-### Changed
-- ONNX Runtime Web 1.30.0 → 1.31.1. Same results on the model check, and the end-to-end test passes on WebGPU.
-- ESLint 10, and every GitHub Action pinned to an exact commit. Dependabot waits a week before proposing a new release.
-
-## [0.1.0] - 2026-11-13
+## [0.1.0] - 2026-11-14
 
 First public release.
 
 ### Added
+- Firefox support (Firefox 140+). One build now makes both packages: `hikaku-<version>-chrome.zip` and `hikaku-<version>-firefox.zip`. In Firefox the model runs in the background page, since Firefox has no offscreen documents.
+- Store kit in `store/`: listing text, permission justifications, reviewer notes, and screenshots and promo tiles at the sizes the stores require (`npm run store-assets`).
 - **Provenance detection**: C2PA Content Credentials (JPEG, PNG, WebP, MP4/MOV/AVIF/HEIC), IPTC Digital Source Type, generator names in EXIF/XMP tool fields, "Made with … AI" declarations, and embedded generation parameters (Automatic1111, ComfyUI, InvokeAI, NovelAI).
 - **On-device visual model** (SwinV2 AI-image detector, Apache-2.0) via ONNX Runtime Web: fp16 on WebGPU, uint8 on WASM fallback. One-time download, cached; optional offline bundle.
 - **Video**: samples up to 3 frames per visible video (including streamed `blob:` video), median score; screenshot fallback for cross-origin video.
@@ -31,6 +25,10 @@ First public release.
 - Details panel lists which video timestamps / GIF frames were checked and each one's score.
 - Project hygiene: Apache-2.0 license, NOTICE, privacy policy, security policy, contributing guide, code of conduct, CI/release/e2e workflows, issue and PR templates.
 - Tooling: unit tests, ESLint, model evaluation script, end-to-end test in Chrome for Testing, production build + zip.
+
+### Dependencies
+- ONNX Runtime Web 1.31.1. Same results on the model check, and the end-to-end test passes on WebGPU.
+- ESLint 10, and every GitHub Action pinned to an exact commit. Dependabot waits a week before proposing a new release.
 
 [Unreleased]: https://github.com/hikaku-io/hikaku-extension/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/hikaku-io/hikaku-extension/releases/tag/v0.1.0
