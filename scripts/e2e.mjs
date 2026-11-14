@@ -276,6 +276,69 @@ try {
   await pop.setViewport({ width: 368, height: 600 });
   await pop.goto(`chrome-extension://${extId}/popup/popup.html`);
   await new Promise((r) => setTimeout(r, 600));
+
+  // Exercise the actual color controls and inspect flags inside the closed shadow root.
+  const colorClient = await tab.createCDPSession();
+  await colorClient.send('DOM.enable');
+  const { root: documentNode } = await colorClient.send('DOM.getDocument', { depth: -1, pierce: true });
+  const findLayer = (node) => {
+    const attrs = node.attributes || [], index = attrs.indexOf('class');
+    if (index >= 0 && attrs[index + 1].split(' ').includes('layer')) return node;
+    for (const child of [...(node.children || []), ...(node.shadowRoots || [])]) {
+      const found = findLayer(child);
+      if (found) return found;
+    }
+    return null;
+  };
+  const layerNode = findLayer(documentNode);
+  if (!layerNode) throw new Error('Flag layer not found');
+  const { object: layerObject } = await colorClient.send('DOM.resolveNode', { nodeId: layerNode.nodeId });
+  const readFlagColors = async () => {
+    const { result } = await colorClient.send('Runtime.callFunctionOn', {
+      objectId: layerObject.objectId, returnByValue: true,
+      functionDeclaration: `function () { return [...this.children].map(frame => {
+        const tag = frame.querySelector('.hd'), dot = getComputedStyle(tag, '::after');
+        return { border: getComputedStyle(frame).borderTopColor, tag: getComputedStyle(tag).backgroundColor,
+          ink: getComputedStyle(tag).color, dot: dot.backgroundColor, dotShadow: dot.boxShadow,
+          dotImage: dot.backgroundImage, style: frame.className };
+      }); }`,
+    });
+    return result.value;
+  };
+  const waitForFlagColors = async (predicate) => {
+    for (let i = 0; i < 50; i++) {
+      const flags = await readFlagColors();
+      if (flags.length && flags.every(predicate)) return true;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return false;
+  };
+  await pop.click('.color-choice[title="Teal"]');
+  check(await waitForFlagColors((f) => f.border === 'rgb(8, 127, 117)' && f.tag === 'rgb(8, 127, 117)'), 'preset color updates existing image and video flags');
+  await pop.reload();
+  await pop.waitForSelector('input[name="flagColorPreset"][value="#087f75"]:checked');
+  check(await pop.$eval('#flagColor', (el) => el.value) === '#087f75', 'flag color survives reopening the popup');
+  await pop.$eval('#flagColor', (input) => { input.value = '#ffffff'; input.dispatchEvent(new Event('input', { bubbles: true })); });
+  const beforeCommit = await pop.evaluate(() => chrome.storage.sync.get('flagColor'));
+  check(beforeCommit.flagColor === '#087f75', 'custom color previews without writing on every picker movement');
+  await pop.$eval('#flagColor', (input) => input.dispatchEvent(new Event('change', { bubbles: true })));
+  check(await waitForFlagColors((f) => f.border === 'rgb(255, 255, 255)' && f.ink === 'rgb(0, 0, 0)'), 'custom white flags get readable black tag text');
+  await pop.click('label:has(input[name="theme"][value="dark"])');
+  await pop.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
+  check(await waitForFlagColors((f) => f.border === 'rgb(255, 255, 255)'), 'theme changes preserve the chosen flag color');
+  await pop.click('.choice:has(input[value="dot"])');
+  check(await waitForFlagColors((f) => f.style.includes('dot-style') && [f.dot, f.dotShadow, f.dotImage].some((value) => value.includes('rgb(255, 255, 255)'))), 'dot markers use the selected color, including hollow model flags');
+  await pop.evaluate(() => chrome.storage.sync.set({ flagColor: 'invalid color' }));
+  await pop.waitForFunction(() => document.getElementById('flagColor').value === '#1759ad');
+  await pop.click('.choice:has(input[value="border"])');
+  check(await waitForFlagColors((f) => f.border === 'rgb(23, 89, 173)' && f.ink === 'rgb(255, 255, 255)'), 'invalid saved colors safely fall back to blue');
+  await pop.click('.color-choice[title="Amber"]');
+  check(await waitForFlagColors((f) => f.border === 'rgb(224, 160, 32)' && f.ink === 'rgb(0, 0, 0)'), 'bright preset colors get readable dark tag text');
+  await pop.waitForSelector('#flagColorReset:not([hidden])');
+  await pop.click('#flagColorReset');
+  check(await waitForFlagColors((f) => f.border === 'rgb(23, 89, 173)'), 'reset restores the default flag color');
+  await pop.click('label:has(input[name="theme"][value="auto"])');
+  await pop.waitForFunction(() => document.documentElement.dataset.theme === 'auto');
   await pop.screenshot({ path: join(SHOTS, '5-popup.png'), fullPage: true });
   console.log(`screenshots → ${SHOTS}`);
 } catch (e) {

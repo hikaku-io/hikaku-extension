@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Videos that receive their initial source after entering the viewport are checked when metadata loads.
 
 ### Added
+- Flag color presets and a custom picker, saved with browser settings and applied to borders, dots, and image tags. Tag text adapts for contrast, with a reset to the default blue.
 - Optional 23 MB Community Forensics second opinion for still images, with its own estimate and an explicit first-use download notice.
 - Browser-native file/URL diagnostics (`npm run trace`), full model comparison tooling in hikaku-bench, and regression checks for evidence handling, cold-start skips, fetch reuse, and queue scheduling.
 

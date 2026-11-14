@@ -33,6 +33,21 @@
           <span class="choice-label">Dot</span>
         </label>
       </div>
+      <div class="flag-color">
+        <div class="row"><label for="flagColor">Flag color</label><button class="link" id="flagColorReset" type="button" aria-label="Reset flag color" hidden>Reset</button></div>
+        <div class="color-controls">
+          <div class="color-presets" role="radiogroup" aria-label="Flag color">
+            <label class="color-choice" title="Blue"><input type="radio" name="flagColorPreset" value="#1759ad" aria-label="Blue"><span style="--swatch: #1759ad" aria-hidden="true"></span></label>
+            <label class="color-choice" title="Teal"><input type="radio" name="flagColorPreset" value="#087f75" aria-label="Teal"><span style="--swatch: #087f75" aria-hidden="true"></span></label>
+            <label class="color-choice" title="Amber"><input type="radio" name="flagColorPreset" value="#e0a020" aria-label="Amber"><span style="--swatch: #e0a020" aria-hidden="true"></span></label>
+            <label class="color-choice" title="Red"><input type="radio" name="flagColorPreset" value="#c43d3d" aria-label="Red"><span style="--swatch: #c43d3d" aria-hidden="true"></span></label>
+            <label class="color-choice" title="Purple"><input type="radio" name="flagColorPreset" value="#7c3aed" aria-label="Purple"><span style="--swatch: #7c3aed" aria-hidden="true"></span></label>
+            <label class="color-choice" title="Gray"><input type="radio" name="flagColorPreset" value="#555e6b" aria-label="Gray"><span style="--swatch: #555e6b" aria-hidden="true"></span></label>
+          </div>
+          <label class="custom-color"><input id="flagColor" type="color" value="#1759ad" aria-label="Custom flag color"><span>Custom</span></label>
+        </div>
+        <p class="hint">For borders, dots, and image tags.</p>
+      </div>
     </section>
 
     <section class="card">

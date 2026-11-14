@@ -41,7 +41,7 @@
 | ✅ | **Video**, including streamed (YouTube, TikTok…) | 3 sampled frames per visible video, median score |
 | ✅ | **Animated GIF / WebP** | First / middle / last frame, median score |
 | ✅ | **Screenshot & flat-graphic filter** | Skips likely screenshots, UI and flat graphics before inference |
-| ✅ | **Flag styles** | Purple border (solid / double / dashed) or corner dot; hover card; details panel; Copy JSON |
+| ✅ | **Flag styles** | Border (solid / double / dashed) or corner dot; preset and custom colors; hover card; details panel; Copy JSON |
 | ✅ | **Right-click → Inspect for AI generation** | Works on any image or video |
 | 🚧 | **Face-swap / deepfake detection** | Face finder + per-face model, [under evaluation](docs/MODELS.md#candidates-under-evaluation) |
 | ✅ | **On-demand second opinion** | Separate 23 MB Community Forensics model; requested in image details, not an automatic replacement |

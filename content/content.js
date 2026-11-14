@@ -1,7 +1,7 @@
 // Hikaku content script.
 // Watches images and videos as they near the viewport, asks the background
-// worker to analyze them, and marks flagged media with a small, quiet dot.
-// Hovering the dot shows a summary card. Clicking it (or right-clicking and
+// worker to analyze them, and marks flagged media with a border or dot.
+// Hovering a flag shows a summary card. Clicking it (or right-clicking and
 // choosing "Inspect for AI generation") opens the full details panel.
 (() => {
   'use strict';
@@ -10,7 +10,7 @@
 
   const MIN_SIDE = 96;      // ignore icons/avatars (natural size)
   const MIN_RENDERED = 64;  // ignore media rendered tiny
-  const DEFAULTS = { enabled: true, sensitivity: 'balanced', style: 'border', visualModel: true, theme: 'auto' };
+  const DEFAULTS = { enabled: true, sensitivity: 'balanced', style: 'border', flagColor: '#1759ad', visualModel: true, theme: 'auto' };
   const settings = { ...DEFAULTS };
   const MIN_VIDEO = 160;    // rendered size needed before sampling video frames
   const FRAMES = 3;         // frames sampled per video
@@ -73,10 +73,10 @@
 
     /* Border style */
     .fr.border-style { border: 2px solid var(--accent); opacity: .85;
-                       box-shadow: 0 0 0 1px rgba(255,255,255,.5); transition: opacity .15s ease, box-shadow .15s ease; }
+                       box-shadow: 0 0 0 1px var(--on-accent); transition: opacity .15s ease, box-shadow .15s ease; }
     .fr.border-style.likely { border-style: dashed; }
     .fr.border-style.edited { border-style: double; border-width: 4px; }
-    .fr.border-style.hot { opacity: 1; box-shadow: 0 0 0 1px rgba(255,255,255,.8); }
+    .fr.border-style.hot { opacity: 1; box-shadow: 0 0 0 1px var(--on-accent); }
 
     /* Handle (the only clickable part) */
     .hd { position: absolute; pointer-events: auto; cursor: pointer; margin: 0; -webkit-tap-highlight-color: transparent; }
@@ -90,10 +90,10 @@
     .dot-style .hd { top: 2px; right: 2px; width: 20px; height: 20px; padding: 0; border: 0; background: transparent;
                      display: grid; place-items: center; opacity: .55; transition: opacity .15s ease; }
     .dot-style .hd::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
-                            box-shadow: 0 0 0 1.5px rgba(255,255,255,.92), 0 1px 3px rgba(0,0,0,.45); transition: width .15s ease, height .15s ease; }
-    .dot-style.edited .hd::after { background: linear-gradient(135deg, var(--accent) 50%, #fff 50%); }
+                            box-shadow: 0 0 0 1.5px var(--on-accent), 0 1px 3px rgba(0,0,0,.45); transition: width .15s ease, height .15s ease; }
+    .dot-style.edited .hd::after { background: linear-gradient(135deg, var(--accent) 50%, var(--on-accent) 50%); }
     .dot-style.likely .hd::after { background: transparent;
-                            box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 1.5px rgba(255,255,255,.92), 0 1px 3px rgba(0,0,0,.45); }
+                            box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 1.5px var(--on-accent), 0 1px 3px rgba(0,0,0,.45); }
     .dot-style.hot .hd { opacity: .9; }
     .dot-style .hd:hover, .dot-style .hd:focus-visible { opacity: 1; outline: none; }
     .dot-style .hd:hover::after, .dot-style .hd:focus-visible::after { width: 11px; height: 11px; }
@@ -926,6 +926,13 @@
   function applyTheme() {
     const dark = settings.theme === 'dark' || (settings.theme !== 'light' && (uiScheme ? uiScheme === 'dark' : pageDark.matches));
     for (const el of [layer, tip, panel]) el.classList.toggle('dark', dark);
+    const color = typeof settings.flagColor === 'string' && /^#[0-9a-f]{6}$/i.test(settings.flagColor) ? settings.flagColor : DEFAULTS.flagColor;
+    const [r, g, b] = color.slice(1).match(/../g).map((hex) => {
+      const value = parseInt(hex, 16) / 255;
+      return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    layer.style.setProperty('--accent', color);
+    layer.style.setProperty('--on-accent', r * 0.2126 + g * 0.7152 + b * 0.0722 > 0.179 ? '#000' : '#fff');
   }
   pageDark.addEventListener('change', applyTheme);
 
