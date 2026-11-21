@@ -32,7 +32,7 @@
     "mp4-muxer": "5.2.2",
     "onnxruntime-web": "1.31.1",
     "pngjs": "7.0.0",
-    "puppeteer": "25.16.0",
+    "puppeteer": "25.17.0",
     "tesseract.js": "7.0.0"
   }
 }
